@@ -5,15 +5,18 @@ import sqlite3
 import time
 import threading
 
-# Auto-Initialize Database if missing
-if not os.path.exists("apsrtc.db"):
-    import init_db
-    init_db.initialize_db()
-
 app = Flask(__name__)
 CORS(app)
 
-DB = "apsrtc.db"
+# Absolute path for Database
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB = os.path.join(BASE_DIR, "apsrtc.db")
+
+# Auto-Initialize Database if missing
+if not os.path.exists(DB):
+    print(f"⚠️ Database not found at {DB}. Creating it...")
+    import init_db
+    init_db.initialize_db()
 
 def get_db():
     return sqlite3.connect(DB)

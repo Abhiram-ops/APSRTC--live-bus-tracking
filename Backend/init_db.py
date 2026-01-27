@@ -1,10 +1,14 @@
 import sqlite3
 import os
 
-DB_NAME = "apsrtc.db"
+import os
+
+# Use absolute path relative to this script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "apsrtc.db")
 
 def initialize_db():
-    print("⏳ Initializing Database...")
+    print(f"⏳ Initializing Database at {DB_NAME}...")
     db = sqlite3.connect(DB_NAME)
     cur = db.cursor()
 
