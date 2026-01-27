@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 import sqlite3
 import time
@@ -17,7 +17,7 @@ def get_db():
 # -----------------------------
 @app.route("/")
 def home():
-    return jsonify({"message": "APSRTC Backend Running Successfully"})
+    return render_template("index.html")
 
 
 # -----------------------------
