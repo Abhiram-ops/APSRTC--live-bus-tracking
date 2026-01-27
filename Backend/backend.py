@@ -33,13 +33,15 @@ def search_buses():
     cur = db.cursor()
 
     query = """
-    SELECT s.service_no, r.route_name, s.service_type, v.vehicle_no
+    SELECT s.service_no, r.route_name, s.service_type, s.ticket_price, v.vehicle_no
     FROM services s
     JOIN routes r ON s.route_id = r.route_id
     JOIN vehicles v ON v.service_id = s.service_id
-    WHERE r.from_station LIKE ? AND r.to_station LIKE ?
+    WHERE (r.from_station LIKE ? AND r.to_station LIKE ?) 
+       OR (r.from_station LIKE ? AND r.to_station LIKE ?)
     """
-    params = [f"%{from_station}%", f"%{to_station}%"]
+    # Check both directions: A->B OR B->A
+    params = [f"%{from_station}%", f"%{to_station}%", f"%{to_station}%", f"%{from_station}%"]
 
     if service_type:
         query += " AND s.service_type=?"
@@ -55,7 +57,8 @@ def search_buses():
             "service_no": row[0],
             "route_name": row[1],
             "service_type": row[2],
-            "vehicle_no": row[3]
+            "ticket_price": row[3],
+            "vehicle_no": row[4]
         })
 
     return jsonify(result)
@@ -132,8 +135,9 @@ def timetable():
     JOIN stops st ON t.stop_id = st.stop_id
     JOIN services s ON t.service_id = s.service_id
     JOIN routes r ON s.route_id = r.route_id
-    WHERE r.from_station LIKE ? AND r.to_station LIKE ?
-    """, (f"%{from_station}%", f"%{to_station}%"))
+    WHERE (r.from_station LIKE ? AND r.to_station LIKE ?) 
+       OR (r.from_station LIKE ? AND r.to_station LIKE ?)
+    """, (f"%{from_station}%", f"%{to_station}%", f"%{to_station}%", f"%{from_station}%"))
 
     rows = cur.fetchall()
     db.close()
@@ -281,6 +285,43 @@ def simulate_live():
         db.commit()
         db.close()
         time.sleep(5)
+
+
+# -----------------------------
+# 🛣️ ROUTES LIST & AUTOCOMPLETE
+# -----------------------------
+@app.route("/api/routes")
+def get_all_routes():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT route_name, from_station, to_station FROM routes")
+    rows = cur.fetchall()
+    db.close()
+
+    result = []
+    for row in rows:
+        result.append({
+            "route_name": row[0],
+            "from": row[1],
+            "to": row[2]
+        })
+    return jsonify(result)
+
+@app.route("/api/stations")
+def get_all_stations():
+    db = get_db()
+    cur = db.cursor()
+    # Get unique stations from both 'from' and 'to' columns
+    cur.execute("""
+        SELECT from_station FROM routes
+        UNION
+        SELECT to_station FROM routes
+    """)
+    rows = cur.fetchall()
+    db.close()
+
+    stations = [row[0] for row in rows]
+    return jsonify(stations)
 
 
 # -----------------------------

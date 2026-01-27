@@ -1,27 +1,204 @@
+:root {
+    --primary: #d32f2f;
+    --primary-dark: #b71c1c;
+    --secondary: #f5f5f5;
+    --text-dark: #333;
+    --text-light: #757575;
+    --white: #ffffff;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --radius: 12px;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    background-color: var(--secondary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding-bottom: 80px; /* Space for bottom nav if we simply scroll */
+}
+
+/* NAVBAR */
+.navbar {
+    background-color: var(--primary);
+    color: var(--white);
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* CONTAINER */
+.app-container {
+    max-width: 480px; /* Mobile app width feel */
+    margin: 20px auto;
+    padding: 0 16px;
+}
+
+/* TABS */
+.nav-tabs {
+    border-bottom: none;
+    margin-bottom: 1rem;
+    background: white;
+    padding: 5px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-around;
+}
+
+.nav-link {
+    border: none;
+    color: var(--text-light);
+    font-weight: 500;
+    border-radius: var(--radius);
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.nav-link.active {
+    background-color: var(--primary);
+    color: var(--white) !important;
+}
+
+/* CARDS */
+.card-box {
+    background: var(--white);
+    border-radius: var(--radius);
     padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    border: none;
 }
 
-.content-wrapper {
-    max-width: 400px;
-    margin: auto;
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-dark);
+    border-left: 4px solid var(--primary);
+    padding-left: 10px;
 }
 
-input, select, button {
+/* INPUTS */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 12px;
+    background-color: #f9f9f9;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
+    border-color: var(--primary);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 600;
     width: 100%;
-    margin: 8px 0;
-    padding: 8px;
+    margin-top: 10px;
+    transition: transform 0.1s;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+/* RESULTS & BUS CARDS */
+.bus-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 5px solid var(--primary);
+    position: relative;
+    transition: transform 0.2s;
+}
+
+.bus-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+.bus-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.service-no {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.bus-type {
+    background: #ffebee;
+    color: var(--primary);
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.route-info {
+    color: var(--text-dark);
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.vehicle-info {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+/* TOGGLE SWITCHES */
+.toggle-wrapper {
+    display: flex;
+    background: #eee;
+    padding: 4px;
+    border-radius: 50px;
+    margin-bottom: 15px;
 }
 
 .toggle-option {
-    display: inline-block;
-    padding: 6px 12px;
-    border: 1px solid #444;
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-radius: 50px;
     cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    transition: all 0.3s ease;
 }
 
 .toggle-option.active {
-    background: purple;
-    color: white;
+    background: var(--white);
+    color: var(--primary);
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ANIMATIONS */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
 }
