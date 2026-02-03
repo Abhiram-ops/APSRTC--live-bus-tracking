@@ -189,6 +189,33 @@ def live_tracking(service_no):
 
 
 # -----------------------------
+# 🗺️ ROUTE DETAILS (For Map Polyline)
+# -----------------------------
+@app.route("/api/route_details/<service_no>")
+def route_details(service_no):
+    db = get_db()
+    cur = db.cursor()
+
+    # Get Route ID and Stops
+    cur.execute("""
+    SELECT s.stop_name, s.lat, s.lng
+    FROM stops s
+    JOIN services sv ON sv.route_id = s.route_id
+    WHERE sv.service_no = ?
+    ORDER BY s.stop_order ASC
+    """, (service_no,))
+
+    rows = cur.fetchall()
+    db.close()
+
+    if not rows:
+        return jsonify({"error": "Route details not found"}), 404
+
+    stops = [{"name": row[0], "lat": row[1], "lng": row[2]} for row in rows]
+    return jsonify(stops)
+
+
+# -----------------------------
 # ⏱️ ETA CALCULATION
 # -----------------------------
 @app.route("/api/eta/<service_no>")

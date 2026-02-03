@@ -116,10 +116,54 @@ async function startLiveMap(serviceNo) {
     // Initial Fetch
     await updateMapLocation(serviceNo, true);
 
+    // Fetch Route Details (Polyline & Stops)
+    drawRouteOnMap(serviceNo);
+
     // Polling every 3 seconds
     trackingInterval = setInterval(() => {
         updateMapLocation(serviceNo, false);
     }, 3000);
+}
+
+// Custom Bus Icon
+const busIcon = L.icon({
+    iconUrl: 'https://img.icons8.com/color/48/bus.png', // Bus Icon
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20]
+});
+
+async function drawRouteOnMap(serviceNo) {
+    try {
+        const res = await fetch(`${API_BASE}/api/route_details/${serviceNo}`);
+        if (!res.ok) return;
+
+        const stops = await res.json();
+        const routeCoords = stops.map(s => [s.lat, s.lng]);
+
+        if (trackingMap) {
+            // Draw Polyline
+            L.polyline(routeCoords, { color: 'blue', weight: 4, opacity: 0.7 }).addTo(trackingMap);
+
+            // Add Stop Markers
+            stops.forEach(stop => {
+                L.circleMarker([stop.lat, stop.lng], {
+                    radius: 6,
+                    fillColor: "#ff0000",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(trackingMap).bindPopup(`🚏 <b>${stop.name}</b>`);
+            });
+
+            // Adjust view to fit route
+            trackingMap.fitBounds(routeCoords);
+        }
+
+    } catch (err) {
+        console.error("Error fetching route details:", err);
+    }
 }
 
 async function updateMapLocation(serviceNo, isFirstTime) {
@@ -156,7 +200,7 @@ async function updateMapLocation(serviceNo, isFirstTime) {
                 attribution: '© OpenStreetMap'
             }).addTo(trackingMap);
 
-            trackingMarker = L.marker([lat, lng]).addTo(trackingMap)
+            trackingMarker = L.marker([lat, lng], { icon: busIcon }).addTo(trackingMap)
                 .bindPopup(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`)
                 .openPopup();
         } else {
