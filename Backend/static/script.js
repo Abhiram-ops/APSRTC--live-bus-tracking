@@ -138,11 +138,16 @@ async function updateMapLocation(serviceNo, isFirstTime) {
         const lng = liveData.lng;
 
         if (isFirstTime) {
-            // Unload old map if exists (shouldn't happen as we overwrote innerHTML, but needed if we didn't)
             if (trackingMap) {
                 trackingMap.off();
                 trackingMap.remove();
                 trackingMap = null;
+            }
+
+            if (typeof L === 'undefined') {
+                console.error("Leaflet JS not loaded");
+                document.getElementById("map").innerHTML = "<div class='alert alert-danger'>Error: Map library not loaded. Check internet connection.</div>";
+                return;
             }
 
             // Init Map (using Leaflet global L)
