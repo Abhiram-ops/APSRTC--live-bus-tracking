@@ -1,4 +1,7 @@
 const API_BASE = ""; // Relative path for same-domain deployment
+let trackingMap = null;
+let trackingMarker = null;
+let trackingInterval = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     initServiceVehicleSearch();
@@ -8,6 +11,10 @@ document.addEventListener("DOMContentLoaded", () => {
     loadStationsForAutocomplete();
 });
 
+
+// ---------------------------
+// SERVICE / VEHICLE SEARCH
+// ---------------------------
 
 // ---------------------------
 // SERVICE / VEHICLE SEARCH
@@ -25,6 +32,9 @@ function initServiceVehicleSearch() {
             resultBox.innerHTML = '<div class="alert alert-warning">Please enter a number</div>';
             return;
         }
+
+        // Clear previous interval if any
+        if (trackingInterval) clearInterval(trackingInterval);
 
         resultBox.innerHTML = "⏳ Searching...";
 
@@ -48,37 +58,39 @@ function initServiceVehicleSearch() {
             let html = "";
 
             if (type === "service") {
-                // Fetch LIVE STATUS for this service
-                let liveData = null;
-                try {
-                    const liveRes = await fetch(`${API_BASE}/api/live/${data.service_no}`);
-                    if (liveRes.ok) liveData = await liveRes.json();
-                } catch (e) { }
+                const serviceNo = data.service_no;
 
                 html = `
                     <div class="bus-card fade-in">
                          <div class="bus-header">
-                            <span class="service-no">${data.service_no}</span>
+                            <span class="service-no">${serviceNo}</span>
                             <span class="bus-type">Service</span>
                         </div>
                         <div class="route-info"><i class="bi bi-signpost-split"></i> ${data.route}</div>
                         
-                        ${liveData ? `
                         <div class="mt-3 p-2 bg-light rounded border">
                             <div class="d-flex justify-content-between">
-                                <span><i class="bi bi-speedometer2"></i> ${liveData.speed} km/h</span>
+                                <span id="speedValue"><i class="bi bi-speedometer2"></i> -- km/h</span>
                                 <span class="text-success fw-bold">RUNNING</span>
                             </div>
-                             <div class="small text-muted mt-1">
-                                <i class="bi bi-geo-alt"></i> ${liveData.lat.toFixed(4)}, ${liveData.lng.toFixed(4)}
+                             <div class="small text-muted mt-1" id="locValue">
+                                <i class="bi bi-geo-alt"></i> --, --
                             </div>
-                             <div class="small text-muted">
-                                <i class="bi bi-clock-history"></i> Updated: ${liveData.updated_at.split(' ')[1]}
+                             <div class="small text-muted" id="updatedValue">
+                                <i class="bi bi-clock-history"></i> Updated: --
                             </div>
                         </div>
-                        ` : '<div class="mt-2 text-muted small"><i class="bi bi-exclamation-circle"></i> Live data unavailable</div>'}
+
+                        <!-- MAP CONTAINER -->
+                        <div id="map" style="height: 400px; width: 100%; margin-top: 15px; border-radius: 8px; z-index: 1;"></div>
                     </div>
                 `;
+
+                resultBox.innerHTML = html;
+
+                // Start Live Tracking
+                startLiveMap(serviceNo);
+
             } else {
                 html = `
                     <div class="bus-card fade-in">
@@ -90,14 +102,70 @@ function initServiceVehicleSearch() {
                         <div class="vehicle-info"><i class="bi bi-signpost-split"></i> ${data.route}</div>
                     </div>
                 `;
+                resultBox.innerHTML = html;
             }
-            resultBox.innerHTML = html;
 
         } catch (error) {
             console.error(error);
             resultBox.innerHTML = '<div class="alert alert-danger">❌ Backend Connection Failed</div>';
         }
     });
+}
+
+async function startLiveMap(serviceNo) {
+    // Initial Fetch
+    await updateMapLocation(serviceNo, true);
+
+    // Polling every 3 seconds
+    trackingInterval = setInterval(() => {
+        updateMapLocation(serviceNo, false);
+    }, 3000);
+}
+
+async function updateMapLocation(serviceNo, isFirstTime) {
+    try {
+        const res = await fetch(`${API_BASE}/api/live/${serviceNo}`);
+        if (!res.ok) return; // Silent fail on subsequent updates if data missing
+
+        const liveData = await res.json();
+
+        // Update Text Info
+        document.getElementById("speedValue").innerHTML = `<i class="bi bi-speedometer2"></i> ${liveData.speed} km/h`;
+        document.getElementById("locValue").innerHTML = `<i class="bi bi-geo-alt"></i> ${liveData.lat.toFixed(4)}, ${liveData.lng.toFixed(4)}`;
+        document.getElementById("updatedValue").innerHTML = `<i class="bi bi-clock-history"></i> Updated: ${liveData.updated_at.split(' ')[1]}`;
+
+        const lat = liveData.lat;
+        const lng = liveData.lng;
+
+        if (isFirstTime) {
+            // Unload old map if exists (shouldn't happen as we overwrote innerHTML, but needed if we didn't)
+            if (trackingMap) {
+                trackingMap.off();
+                trackingMap.remove();
+                trackingMap = null;
+            }
+
+            // Init Map (using Leaflet global L)
+            trackingMap = L.map('map').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(trackingMap);
+
+            trackingMarker = L.marker([lat, lng]).addTo(trackingMap)
+                .bindPopup(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`)
+                .openPopup();
+        } else {
+            // Update Marker
+            if (trackingMarker && trackingMap) {
+                trackingMarker.setLatLng([lat, lng]);
+                trackingMap.panTo([lat, lng]);
+                trackingMarker.setPopupContent(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`);
+            }
+        }
+
+    } catch (err) {
+        console.error("Tracking Error:", err);
+    }
 }
 
 
