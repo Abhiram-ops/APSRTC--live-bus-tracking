@@ -118,15 +118,28 @@ function initServiceVehicleSearch() {
 }
 
 async function startLiveMap(serviceNo) {
-    // Initial Fetch
-    await updateMapLocation(serviceNo, true);
+    // 1. Initialize Map Container immediately
+    if (trackingMap) {
+        trackingMap.off();
+        trackingMap.remove();
+        trackingMap = null;
+    }
 
-    // Fetch Route Details (Polyline & Stops)
-    drawRouteOnMap(serviceNo);
+    // Default center (Vizag) before we get data
+    trackingMap = L.map('map').setView([17.6868, 83.2185], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(trackingMap);
 
-    // Polling every 3 seconds
+    // 2. Plot Route (Polyline & Stops) - effectively sets the correct view
+    await drawRouteOnMap(serviceNo);
+
+    // 3. Initial Live Location Check
+    await updateMapLocation(serviceNo);
+
+    // 4. Start Polling
     trackingInterval = setInterval(() => {
-        updateMapLocation(serviceNo, false);
+        updateMapLocation(serviceNo);
     }, 3000);
 }
 
@@ -140,53 +153,45 @@ const busIcon = L.icon({
 
 async function drawRouteOnMap(serviceNo) {
     try {
-        console.log("Fetching route details for:", serviceNo);
         const res = await fetch(`${API_BASE}/api/route_details/${serviceNo}`);
-        if (!res.ok) {
-            console.error("Route details fetch failed:", res.status);
-            return;
-        }
+        if (!res.ok) return;
 
         const stops = await res.json();
-        console.log("Stops received:", stops);
-
-        if (!stops || stops.length === 0) {
-            console.warn("No stops found for this service.");
-            // alert("Debug: No stops found for this service. Check database.");
-            return;
-        }
+        if (!stops || stops.length === 0) return;
 
         const routeCoords = stops.map(s => [s.lat, s.lng]);
 
-        if (trackingMap) {
-            // Draw Polyline
-            L.polyline(routeCoords, { color: 'blue', weight: 4, opacity: 0.7 }).addTo(trackingMap);
+        // Draw Polyline
+        L.polyline(routeCoords, { color: 'blue', weight: 4, opacity: 0.7 }).addTo(trackingMap);
 
-            // Add Stop Markers
-            stops.forEach(stop => {
-                L.circleMarker([stop.lat, stop.lng], {
-                    radius: 6,
-                    fillColor: "#ff0000",
-                    color: "#fff",
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                }).addTo(trackingMap).bindPopup(`🚏 <b>${stop.name}</b>`);
-            });
+        // Add Stop Markers
+        stops.forEach(stop => {
+            L.circleMarker([stop.lat, stop.lng], {
+                radius: 6,
+                fillColor: "#ff0000",
+                color: "#fff",
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(trackingMap).bindPopup(`🚏 <b>${stop.name}</b>`);
+        });
 
-            // Adjust view to fit route - REMOVED to prioritize live bus location
-            // trackingMap.fitBounds(routeCoords);
-        }
+        // Fit map to route (so user sees something relevant)
+        trackingMap.fitBounds(routeCoords);
 
     } catch (err) {
-        console.error("Error fetching route details:", err);
+        console.error("Error drawing route:", err);
     }
 }
 
-async function updateMapLocation(serviceNo, isFirstTime) {
+async function updateMapLocation(serviceNo) {
     try {
         const res = await fetch(`${API_BASE}/api/live/${serviceNo}`);
-        if (!res.ok) return; // Silent fail on subsequent updates if data missing
+        if (!res.ok) {
+            // Bus not live yet - ok to fail silently, map is already showing route
+            document.getElementById("updatedValue").innerHTML = `<i class="bi bi-clock-history"></i> Status: Waiting for driver...`;
+            return;
+        }
 
         const liveData = await res.json();
 
@@ -198,35 +203,14 @@ async function updateMapLocation(serviceNo, isFirstTime) {
         const lat = liveData.lat;
         const lng = liveData.lng;
 
-        if (isFirstTime) {
-            if (trackingMap) {
-                trackingMap.off();
-                trackingMap.remove();
-                trackingMap = null;
-            }
-
-            if (typeof L === 'undefined') {
-                console.error("Leaflet JS not loaded");
-                document.getElementById("map").innerHTML = "<div class='alert alert-danger'>Error: Map library not loaded. Check internet connection.</div>";
-                return;
-            }
-
-            // Init Map (using Leaflet global L)
-            trackingMap = L.map('map').setView([lat, lng], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(trackingMap);
-
+        // Create or Update Marker
+        if (!trackingMarker) {
             trackingMarker = L.marker([lat, lng], { icon: busIcon }).addTo(trackingMap)
                 .bindPopup(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`)
                 .openPopup();
         } else {
-            // Update Marker
-            if (trackingMarker && trackingMap) {
-                trackingMarker.setLatLng([lat, lng]);
-                trackingMap.panTo([lat, lng]);
-                trackingMarker.setPopupContent(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`);
-            }
+            trackingMarker.setLatLng([lat, lng]);
+            trackingMarker.setPopupContent(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`);
         }
 
     } catch (err) {
