@@ -314,67 +314,72 @@ def driver_dashboard():
 # -----------------------------
 # 📡 UPDATE LIVE LOCATION (From Driver)
 # -----------------------------
+# Global Debug Log
+DEBUG_LOGS = []
+
+@app.route("/api/debug")
+def get_debug_logs():
+    return jsonify(DEBUG_LOGS[-20:]) # Last 20 logs
+
 @app.route("/api/update_location", methods=["POST"])
 def update_location():
-    data = request.json
-    service_no = data.get("service_no")
-    lat = data.get("lat")
-    lng = data.get("lng")
-    speed = data.get("speed", 0)
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No JSON data received"}), 400
+            
+        service_no = data.get("service_no")
+        lat = data.get("lat")
+        lng = data.get("lng")
+        speed = data.get("speed", 0)
+        
+        log_entry = f"{time.strftime('%H:%M:%S')}: Received {service_no} at {lat}, {lng}"
+        print(log_entry, flush=True)
+        DEBUG_LOGS.append(log_entry)
 
-    if not service_no or not lat or not lng:
-        return jsonify({"error": "Missing data"}), 400
+        if not service_no or not lat or not lng:
+            return jsonify({"error": "Missing data"}), 400
 
-    db = get_db()
-    cur = db.cursor()
+        db = get_db()
+        cur = db.cursor()
 
-    # Find vehicle_id for this service
-    cur.execute("""
-    SELECT v.vehicle_id FROM vehicles v
-    JOIN services s ON v.service_id = s.service_id
-    WHERE s.service_no = ?
-    """, (service_no,))
-    
-    row = cur.fetchone()
-    if not row:
+        # Find vehicle_id for this service
+        cur.execute("""
+        SELECT v.vehicle_id FROM vehicles v
+        JOIN services s ON v.service_id = s.service_id
+        WHERE s.service_no = ?
+        """, (service_no,))
+        
+        row = cur.fetchone()
+        if not row:
+            db.close()
+            return jsonify({"error": "Service/Vehicle not found"}), 404
+
+        vehicle_id = row[0]
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Update or Insert Live Location
+        cur.execute("""
+            UPDATE live_location 
+            SET lat=?, lng=?, speed=?, updated_at=?
+            WHERE bus_id=?
+        """, (lat, lng, speed, timestamp, vehicle_id))
+
+        if cur.rowcount == 0:
+             cur.execute("""
+            INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (vehicle_id, lat, lng, speed, timestamp))
+
+        db.commit()
         db.close()
-        return jsonify({"error": "Service/Vehicle not found"}), 404
 
-    vehicle_id = row[0]
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        return jsonify({"message": "Location updated", "time": timestamp})
 
-    # Update or Insert Live Location
-    cur.execute("""
-    INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(bus_id) DO UPDATE SET
-        lat=excluded.lat,
-        lng=excluded.lng,
-        speed=excluded.speed,
-        updated_at=excluded.updated_at
-    """, (vehicle_id, lat, lng, speed, timestamp))
-    
-    # Note: SQLite < 3.24 doesn't support UPSERT standard syntax nicely without unique constraint 
-    # But for this simple app, we can just UPDATE.
-    # actually, let's try a simpler UPDATE first, if 0 rows modified, then INSERT.
-    
-    # Re-doing logic for broad compatibility
-    cur.execute("""
-        UPDATE live_location 
-        SET lat=?, lng=?, speed=?, updated_at=?
-        WHERE bus_id=?
-    """, (lat, lng, speed, timestamp, vehicle_id))
-
-    if cur.rowcount == 0:
-         cur.execute("""
-        INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (vehicle_id, lat, lng, speed, timestamp))
-
-    db.commit()
-    db.close()
-
-    return jsonify({"message": "Location updated", "time": timestamp})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 # -----------------------------

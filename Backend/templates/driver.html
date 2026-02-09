@@ -237,9 +237,21 @@
                     const data = await response.json();
                     log(`✅ Sent: ${lat.toFixed(5)}, ${lng.toFixed(5)} (${speed} km/h)`);
                 } else {
-                    const err = await response.text();
-                    log("❌ Backend Error: " + response.status);
-                    console.error("Backend Error:", err);
+                    let errorMessage = "Status " + response.status;
+                    try {
+                        const errData = await response.json();
+                        if (errData.error) errorMessage = errData.error;
+                    } catch (e) {
+                        const text = await response.text();
+                        if (text) errorMessage += " " + text.substring(0, 100);
+                    }
+
+                    log("❌ Error: " + errorMessage);
+                    console.error("Backend Error:", errorMessage);
+
+                    statusContainer.classList.remove("status-active", "pulse");
+                    statusContainer.classList.add("status-error");
+                    statusBox.querySelector(".status-text").innerHTML = "Error 🔴";
                 }
             } catch (err) {
                 log("❌ Network Error: " + err.message);

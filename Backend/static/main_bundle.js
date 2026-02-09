@@ -174,8 +174,8 @@ async function drawRouteOnMap(serviceNo) {
                 }).addTo(trackingMap).bindPopup(`🚏 <b>${stop.name}</b>`);
             });
 
-            // Adjust view to fit route
-            trackingMap.fitBounds(routeCoords);
+            // Adjust view to fit route - REMOVED to prioritize live bus location
+            // trackingMap.fitBounds(routeCoords);
         }
 
     } catch (err) {
