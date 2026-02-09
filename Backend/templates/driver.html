@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard - APSRTC Live</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .card-box {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            max-width: 500px;
+            margin: auto;
+        }
+
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #e9ecef;
+            text-align: center;
+        }
+
+        .status-header {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .status-text {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .status-active .status-box {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-active .status-text {
+            color: #155724;
+        }
+
+        .status-error .status-box {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-error .status-text {
+            color: #721c24;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.02);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        #debugLog {
+            font-family: monospace;
+            font-size: 0.8rem;
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card-box">
+        <h3 class="text-center mb-4"><i class="bi bi-person-badge-fill text-primary"></i> Driver Dashboard</h3>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Select Service Number</label>
+            <select id="serviceSelect" class="form-select form-select-lg">
+                <option value="">-- Select Service --</option>
+                <option value="28A">28A (Express)</option>
+                <option value="6K">6K (Metro)</option>
+                <option value="400K">400K (Deluxe)</option>
+            </select>
+            <div class="form-text">Choose the bus route you are driving.</div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <button id="startBtn" class="btn btn-primary btn-lg"><i class="bi bi-play-circle-fill"></i> Start Sharing
+                Location</button>
+            <button id="stopBtn" class="btn btn-danger btn-lg" style="display: none;"><i
+                    class="bi bi-stop-circle-fill"></i> Stop Sharing</button>
+        </div>
+
+        <div id="statusContainer" class="mt-4">
+            <div id="statusBox" class="status-box">
+                <div class="status-header">Current Status</div>
+                <div class="status-text">Offline ⚪</div>
+            </div>
+        </div>
+
+        <div id="debugLog">Logs will appear here...</div>
+    </div>
+
+    <script>
+        let watchId = null;
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const serviceSelect = document.getElementById("serviceSelect");
+        const statusBox = document.getElementById("statusBox");
+        const statusContainer = document.getElementById("statusContainer");
+        const debugLog = document.getElementById("debugLog");
+
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement("div");
+            div.innerHTML = `<span style="color:#888;">[${time}]</span> ${msg}`;
+            debugLog.insertBefore(div, debugLog.firstChild);
+            // Limit logs
+            if (debugLog.children.length > 50) debugLog.removeChild(debugLog.lastChild);
+        }
+
+        startBtn.addEventListener("click", () => {
+            const serviceNo = serviceSelect.value;
+            if (!serviceNo) {
+                alert("Please select a service number first.");
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+
+            // UI Updates - Active State
+            startBtn.style.display = "none";
+            stopBtn.style.display = "block";
+            serviceSelect.disabled = true;
+
+            statusContainer.classList.add("status-active", "pulse");
+            statusContainer.classList.remove("status-error");
+            statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
+
+            log("Starting tracking for " + serviceNo + "...");
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude, speed } = position.coords;
+                    // speed is in m/s, convert to km/h
+                    const speedKmph = speed ? (speed * 3.6).toFixed(1) : 0;
+
+                    updateBackend(serviceNo, latitude, longitude, speedKmph);
+                },
+                (error) => {
+                    console.error(error);
+                    log("⚠️ GPS Error: " + error.message);
+
+                    statusContainer.classList.remove("status-active", "pulse");
+                    statusContainer.classList.add("status-error");
+                    statusBox.querySelector(".status-text").innerHTML = "GPS Signal Lost 🔴";
+                },
+                options
+            );
+        });
+
+        stopBtn.addEventListener("click", () => {
+            stopTracking();
+        });
+
+        function stopTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+
+            // UI Reset
+            stopBtn.style.display = "none";
+            startBtn.style.display = "block";
+            serviceSelect.disabled = false;
+
+            statusContainer.classList.remove("status-active", "pulse", "status-error");
+            statusBox.querySelector(".status-text").innerHTML = "Offline ⚪";
+
+            log("Stopped tracking.");
+        }
+
+        async function updateBackend(serviceNo, lat, lng, speed) {
+            try {
+                /* 
+                   In a real deployment with separate frontend/backend domains, 
+                   use the full URL. Here relative path works. 
+                */
+                const response = await fetch('/api/update_location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service_no: serviceNo,
+                        lat: lat,
+                        lng: lng,
+                        speed: speed
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Sent: ${lat.toFixed(5)}, ${lng.toFixed(5)} (${speed} km/h)`);
+                } else {
+                    const err = await response.text();
+                    log("❌ Backend Error: " + response.status);
+                    console.error("Backend Error:", err);
+                }
+            } catch (err) {
+                log("❌ Network Error: " + err.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

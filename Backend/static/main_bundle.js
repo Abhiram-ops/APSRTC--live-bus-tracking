@@ -9,6 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initTimetableSearch();
     initRoutesView();
     loadStationsForAutocomplete();
+
+    // Version Indicator
+    const brand = document.querySelector('.navbar-brand');
+    if (brand) brand.innerHTML += ' <span style="font-size:0.6em; color:#ddd;">v4.0</span>';
+    console.log("APP VERSION: 4.0 ADVANCED MAPS LOADED");
 });
 
 
@@ -135,10 +140,22 @@ const busIcon = L.icon({
 
 async function drawRouteOnMap(serviceNo) {
     try {
+        console.log("Fetching route details for:", serviceNo);
         const res = await fetch(`${API_BASE}/api/route_details/${serviceNo}`);
-        if (!res.ok) return;
+        if (!res.ok) {
+            console.error("Route details fetch failed:", res.status);
+            return;
+        }
 
         const stops = await res.json();
+        console.log("Stops received:", stops);
+
+        if (!stops || stops.length === 0) {
+            console.warn("No stops found for this service.");
+            // alert("Debug: No stops found for this service. Check database.");
+            return;
+        }
+
         const routeCoords = stops.map(s => [s.lat, s.lng]);
 
         if (trackingMap) {

@@ -304,6 +304,80 @@ def add_vehicle():
 
 
 # -----------------------------
+# 🚦 DRIVER DASHBOARD
+# -----------------------------
+@app.route("/driver")
+def driver_dashboard():
+    return render_template("driver.html")
+
+
+# -----------------------------
+# 📡 UPDATE LIVE LOCATION (From Driver)
+# -----------------------------
+@app.route("/api/update_location", methods=["POST"])
+def update_location():
+    data = request.json
+    service_no = data.get("service_no")
+    lat = data.get("lat")
+    lng = data.get("lng")
+    speed = data.get("speed", 0)
+
+    if not service_no or not lat or not lng:
+        return jsonify({"error": "Missing data"}), 400
+
+    db = get_db()
+    cur = db.cursor()
+
+    # Find vehicle_id for this service
+    cur.execute("""
+    SELECT v.vehicle_id FROM vehicles v
+    JOIN services s ON v.service_id = s.service_id
+    WHERE s.service_no = ?
+    """, (service_no,))
+    
+    row = cur.fetchone()
+    if not row:
+        db.close()
+        return jsonify({"error": "Service/Vehicle not found"}), 404
+
+    vehicle_id = row[0]
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Update or Insert Live Location
+    cur.execute("""
+    INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(bus_id) DO UPDATE SET
+        lat=excluded.lat,
+        lng=excluded.lng,
+        speed=excluded.speed,
+        updated_at=excluded.updated_at
+    """, (vehicle_id, lat, lng, speed, timestamp))
+    
+    # Note: SQLite < 3.24 doesn't support UPSERT standard syntax nicely without unique constraint 
+    # But for this simple app, we can just UPDATE.
+    # actually, let's try a simpler UPDATE first, if 0 rows modified, then INSERT.
+    
+    # Re-doing logic for broad compatibility
+    cur.execute("""
+        UPDATE live_location 
+        SET lat=?, lng=?, speed=?, updated_at=?
+        WHERE bus_id=?
+    """, (lat, lng, speed, timestamp, vehicle_id))
+
+    if cur.rowcount == 0:
+         cur.execute("""
+        INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (vehicle_id, lat, lng, speed, timestamp))
+
+    db.commit()
+    db.close()
+
+    return jsonify({"message": "Location updated", "time": timestamp})
+
+
+# -----------------------------
 # 🔄 SIMULATE LIVE MOVEMENT
 # -----------------------------
 def simulate_live():
@@ -394,5 +468,5 @@ def dashboard():
 # RUN
 # -----------------------------
 if __name__ == "__main__":
-    threading.Thread(target=simulate_live, daemon=True).start()
+    # threading.Thread(target=simulate_live, daemon=True).start()  # Disabled for manual driver updates
     app.run(port=5000, debug=True)
