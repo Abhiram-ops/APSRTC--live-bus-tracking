@@ -117,10 +117,10 @@ def initialize_db():
     cur.execute("INSERT INTO timetable VALUES (4,3,4,'11:00')")
     cur.execute("INSERT INTO timetable VALUES (5,3,5,'11:30')")
 
-    # Live location
-    cur.execute("INSERT INTO live_location VALUES (1,17.72,83.30,35,'2026-01-23 09:00')")
-    cur.execute("INSERT INTO live_location VALUES (2,17.73,83.31,30,'2026-01-23 09:00')")
-    cur.execute("INSERT INTO live_location VALUES (3,17.74,83.32,40,'2026-01-23 09:00')")
+    # Live location - REMOVED dummy data so we only show real driver locations
+    # cur.execute("INSERT INTO live_location VALUES (1,17.72,83.30,35,'2026-01-23 09:00')")
+    # cur.execute("INSERT INTO live_location VALUES (2,17.73,83.31,30,'2026-01-23 09:00')")
+    # cur.execute("INSERT INTO live_location VALUES (3,17.74,83.32,40,'2026-01-23 09:00')")
 
     db.commit()
     db.close()
