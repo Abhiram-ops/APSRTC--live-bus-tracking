@@ -1,54 +1,117 @@
-# 🚌 APSRTC Live Track (Vizag City)
+# 🚍 APSRTC Live Tracking System
 
-A modern, real-time bus tracking application for Visakhapatnam (Vizag) city buses. This project features a full-stack implementation with a Flask backend and a responsive, app-like frontend.
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://apsrtc-vizag.onrender.com)
 
-## 🚀 Features
+A modern, real-time bus tracking application for Visakhapatnam (Vizag) city. Built with Flask, Leaflet.js, and a focus on clean, responsive design.
 
--   **Ticket Search**: Find buses between stations with **Ticket Fare** display.
--   **Live Tracking**: Real-time updates of speed and location for specific services (e.g., 28A).
--   **Route Listing**: View all available city routes.
--   **Autocomplete**: Smart search suggestions for partial station names.
--   **Modern UI**: Mobile-first design with a clean Red & White aesthetic.
+## 🌟 Key Features
 
-## 🛠️ Tech Stack
+### 📍 For Commuters (Users)
+- **Live Bus Tracking:** Watch buses move in real-time on an interactive map.
+- **Route Search:** Find buses between any two stations (e.g., Gajuwaka to Beach Road).
+- **Service Details:** View stops, timetables, and estimated arrival times (ETA).
+- **Secure Portal:** User registration and login with "Remember Me" functionality.
+- **Modern UI:** extensive glassmorphism design with a scenic Vizag background.
 
--   **Backend**: Python (Flask), SQLite3
--   **Frontend**: HTML5, CSS3 (Modern Variables), JavaScript (ES6)
--   **Data**: Mock data simulated via local database.
+### 🚌 For Drivers
+- **Mobile-First Dashboard:** Optimized interface for easy use on smartphones.
+- **One-Click Tracking:** Start/Stop sharing location with a single tap.
+- **Live Status:** Visual indicators for active/inactive status.
+- **Secure Login:** Dedicated driver authentication portal.
 
-## 📦 How to Run
+---
+
+## 🛠️ Technology Stack
+
+- **Backend:** Python (Flask), SQLite3
+- **Frontend:** HTML5, CSS3, JavaScript (Vanilla ES6)
+- **Maps:** Leaflet.js (OpenStreetMap)
+- **Security:** 
+    - `Werkzeug` (Password Hashing)
+    - `Flask-Limiter` (Rate Limiting)
+    - `Flask-Talisman` (Secure Headers)
+    - `python-dotenv` (Secrets Management)
+
+---
+
+## 🚀 Installation & Setup
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/apsrtc-live-track.git
-cd apsrtc-live-track
+git clone https://github.com/your-username/apsrtc-live-tracking.git
+cd apsrtc-live-tracking
 ```
 
-### 2. Install Dependencies
-Make sure you have Python installed.
+### 2. Create a Virtual Environment
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Mac/Linux
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Initialize Database
-Initialize the SQLite database with seed data:
+### 4. Configure Environment Variables
+Create a `.env` file in the `Backend` folder:
 ```bash
-cd Backend
-python init_db.py
+# Backend/.env
+SECRET_KEY=your_secure_random_key_here
+FLASK_ENV=development
 ```
 
-### 4. Run the Backend
-Start the Flask server:
+### 5. Run the Application
 ```bash
-python backend.py
+# Navigate to the backend directory if needed, or run from root:
+python Backend/backend.py
 ```
-*The server will run at `http://127.0.0.1:5000`*
+Visit `http://localhost:5000` in your browser.
 
-### 5. Open Frontend
-Open `Backend/Test_Frontend/index.html` in your browser.
+---
+
+## 🌐 Deployment (Render.com)
+
+This project is configured for deployment on Render.
+
+1. **Create a Web Service** on Render.
+2. **Connect your GitHub Repo.**
+3. **Settings:**
+    - **Build Command:** `pip install -r requirements.txt`
+    - **Start Command:** `gunicorn Backend.backend:app`
+4. **Environment Variables:** Add your `SECRET_KEY` in the Render dashboard.
+
+---
+
+## 📂 Project Structure
+
+```
+├── Backend/
+│   ├── static/             # CSS, JS, Images
+│   ├── templates/          # HTML files (index, login, driver)
+│   ├── backend.py          # Main Flask Application
+│   ├── init_db.py          # Database Initialization Script
+│   └── .env                # Environment Variables (Not committed)
+├── apsrtc.db               # SQLite Database (Auto-generated)
+├── requirements.txt        # Python Dependencies
+└── README.md               # Project Documentation
+```
+
+## 🛡️ Security
+
+- **Rate Limiting:** Protects login endpoints from brute-force attacks.
+- **Session Management:** Secure server-side sessions.
+- **Input Validation:** Parameterized SQL queries prevent injection attacks.
+
+---
 
 ## 📸 Screenshots
-*(Add screenshots of your Dashboard and Live Tracking screens here)*
 
-## 📄 License
-MIT License
+*(Add screenshots of your Dashboard, Map, and Mobile View here)*
+
+---
+
+Made with ❤️ for Vizag Commuters.
