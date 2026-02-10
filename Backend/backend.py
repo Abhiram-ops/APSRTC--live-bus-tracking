@@ -325,64 +325,7 @@ def add_vehicle():
     return jsonify({"message": "Vehicle added successfully"})
 
 
-# -----------------------------
-# 🔐 USER (RIDER) AUTHENTICATION
-# -----------------------------
 
-@app.route("/api/user/register", methods=["POST"])
-@limiter.limit("3 per hour")
-def user_register():
-    data = request.json
-    username = data.get("username")
-    password = data.get("password")
-
-    if not username or not password:
-        return jsonify({"error": "Missing username or password"}), 400
-
-    hashed_pw = generate_password_hash(password)
-
-    try:
-        db = get_db()
-        cur = db.cursor()
-        cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
-        db.commit()
-        db.close()
-        return jsonify({"message": "Registration successful! Please login."})
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "Username already exists"}), 409
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/user/login", methods=["POST"])
-@limiter.limit("10 per minute")
-def user_login():
-    data = request.json
-    username = data.get("username")
-    password = data.get("password")
-    remember = data.get("remember", False)
-
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("SELECT id, password FROM users WHERE username = ?", (username,))
-    user = cur.fetchone()
-    db.close()
-
-    if user and check_password_hash(user[1], password):
-        session.clear()
-        session["user_id"] = user[0]
-        session["username"] = username
-        
-        # Remember Me Logic (30 days)
-        session.permanent = True if remember else False
-        
-        return jsonify({"message": "Login successful", "redirect": "/"})
-    
-    return jsonify({"error": "Invalid credentials"}), 401
-
-@app.route("/api/user/logout", methods=["POST"])
-def user_logout():
-    session.clear()
-    return jsonify({"message": "Logged out", "redirect": "/login"})
 
 
 # -----------------------------
