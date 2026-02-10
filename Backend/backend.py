@@ -5,9 +5,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import time
 import threading
+from dotenv import load_dotenv
+from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "super_secret_key_for_demo_only" # Change this for production!
+# Security Headers (Force HTTPS in production, tweak for dev)
+Talisman(app, content_security_policy=None, force_https=False)  # Set force_https=True in prod
+# Rate Limiting
+limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
+
+app.secret_key = os.getenv("SECRET_KEY", "fallback_dev_key")
 CORS(app)
 
 # Absolute path for Database
@@ -319,6 +331,7 @@ def driver_login_page():
     return render_template("driver_login.html")
 
 @app.route("/api/driver/register", methods=["POST"])
+@limiter.limit("3 per hour")
 def driver_register():
     data = request.json
     username = data.get("username")
@@ -342,6 +355,7 @@ def driver_register():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/driver/login", methods=["POST"])
+@limiter.limit("5 per minute")
 def driver_login():
     data = request.json
     username = data.get("username")
