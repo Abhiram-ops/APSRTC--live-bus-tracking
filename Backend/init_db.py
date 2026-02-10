@@ -84,6 +84,15 @@ def initialize_db():
     )
     """)
 
+    # DRIVERS
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS drivers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+    """)
+
     # ---------------- SAMPLE DATA ----------------
 
     # Routes

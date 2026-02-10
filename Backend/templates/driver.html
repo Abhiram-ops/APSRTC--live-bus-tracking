@@ -98,7 +98,10 @@
 <body>
 
     <div class="card-box">
-        <h3 class="text-center mb-4"><i class="bi bi-person-badge-fill text-primary"></i> Driver Dashboard</h3>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="m-0"><i class="bi bi-person-badge-fill text-primary"></i> Driver</h3>
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
 
         <div class="mb-3">
             <label class="form-label fw-bold">Select Service Number</label>
@@ -256,6 +259,12 @@
             } catch (err) {
                 log("❌ Network Error: " + err.message);
             }
+        }
+        async function logout() {
+            try {
+                await fetch("/api/driver/logout", { method: "POST" });
+                window.location.reload();
+            } catch (e) { window.location.reload(); }
         }
     </script>
 </body>

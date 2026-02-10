@@ -1,11 +1,13 @@
 import os
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, session, redirect, url_for
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import time
 import threading
 
 app = Flask(__name__)
+app.secret_key = "super_secret_key_for_demo_only" # Change this for production!
 CORS(app)
 
 # Absolute path for Database
@@ -306,9 +308,68 @@ def add_vehicle():
 # -----------------------------
 # 🚦 DRIVER DASHBOARD
 # -----------------------------
+# -----------------------------
+# 🔐 DRIVER AUTHENTICATION
+# -----------------------------
+
+@app.route("/driver/login")
+def driver_login_page():
+    if "driver_id" in session:
+        return redirect("/driver")
+    return render_template("driver_login.html")
+
+@app.route("/api/driver/register", methods=["POST"])
+def driver_register():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "Missing username or password"}), 400
+
+    hashed_pw = generate_password_hash(password)
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("INSERT INTO drivers (username, password) VALUES (?, ?)", (username, hashed_pw))
+        db.commit()
+        db.close()
+        return jsonify({"message": "Registration successful! Please login."})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Username already exists"}), 409
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/driver/login", methods=["POST"])
+def driver_login():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id, password FROM drivers WHERE username = ?", (username,))
+    user = cur.fetchone()
+    db.close()
+
+    if user and check_password_hash(user[1], password):
+        session["driver_id"] = user[0]
+        session["username"] = username
+        return jsonify({"message": "Login successful", "redirect": "/driver"})
+    
+    return jsonify({"error": "Invalid credentials"}), 401
+
+@app.route("/api/driver/logout", methods=["POST"])
+def driver_logout():
+    session.clear()
+    return jsonify({"message": "Logged out", "redirect": "/driver/login"})
+
 @app.route("/driver")
 def driver_dashboard():
-    return render_template("driver.html")
+    if "driver_id" not in session:
+        return redirect("/driver/login")
+    return render_template("driver.html", username=session.get("username"))
 
 
 # -----------------------------
