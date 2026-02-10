@@ -145,5 +145,33 @@ def initialize_db():
 
     print("✅ Database created successfully!")
 
+def migrate():
+    """Safely create tables if they don't exist, without dropping data."""
+    print(f"🔄 Checking/Migrating Database at {DB_NAME}...")
+    db = sqlite3.connect(DB_NAME)
+    cur = db.cursor()
+
+    # Ensure USERS table exists (Safe to run always)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+    """)
+    
+    # Ensure DRIVERS table exists
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS drivers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+    """)
+
+    db.commit()
+    db.close()
+    print("✅ Migration complete!")
+
 if __name__ == "__main__":
     initialize_db()
