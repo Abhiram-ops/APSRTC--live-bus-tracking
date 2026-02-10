@@ -10,17 +10,22 @@
     --text-dark: #212529;
     --text-muted: #6c757d;
     --border-radius: 12px;
-    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
     --transition: all 0.3s ease;
 }
 
 body {
     font-family: 'Inter', sans-serif;
-    background-color: var(--bg-color);
+    /* Fallback image (Nature/Sea) since generation failed */
+    background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://picsum.photos/1920/1080?grayscale&blur=2');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
     color: var(--text-dark);
     -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
 }
 
 /* Navbar */
@@ -93,14 +98,16 @@ body {
 }
 
 /* Form Controls */
-.form-control, .form-select {
+.form-control,
+.form-select {
     border-radius: 8px;
     padding: 12px 15px;
     border: 1px solid #dee2e6;
     background-color: #fcfcfc;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.15);
     border-color: var(--primary-color);
     background-color: #fff;
@@ -177,8 +184,8 @@ body {
 #map {
     border-radius: var(--border-radius);
     overflow: hidden;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
-    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Animations */
@@ -187,16 +194,44 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Utilities */
-.text-primary { color: var(--primary-color) !important; }
-.bg-light { background-color: #f8f9fa !important; }
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .container { padding-left: 15px; padding-right: 15px; }
-    .card-box { padding: 20px; }
+    .container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .card-box {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .navbar-brand {
+        font-size: 1.25rem;
+    }
+
+    .btn-lg {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
 }
