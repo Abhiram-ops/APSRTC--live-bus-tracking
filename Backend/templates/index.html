@@ -17,73 +17,72 @@
 <body>
 
     <!-- NAVBAR -->
-    <nav class="navbar">
-        <div class="container-fluid">
-            <span class="navbar-brand">
+    <nav class="navbar sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
                 <i class="bi bi-bus-front-fill"></i> APSRTC Live
-            </span>
-            <div class="d-flex align-items-center">
-                <a href="/driver" class="text-white-50 text-decoration-none small me-3"><i
-                        class="bi bi-person-badge"></i> Driver</a>
-                <span class="small text-white-50">Vizag City</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="small text-muted d-none d-md-block"><i class="bi bi-geo-alt-fill text-primary"></i> Vizag
+                    City</span>
+                <a href="/driver" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    <i class="bi bi-person-badge"></i> Driver
+                </a>
             </div>
         </div>
     </nav>
 
-    <div class="app-container">
+    <div class="container mt-4 mb-5" style="max-width: 600px;">
 
         <!-- TABS -->
-        <ul class="nav nav-tabs nav-fill">
+        <ul class="nav nav-pills nav-fill mb-4 bg-white p-2 rounded-pill shadow-sm">
             <li class="nav-item">
-                <a class="nav-link active" onclick="switchTab('search')"><i class="bi bi-search"></i> Search</a>
+                <a class="nav-link active rounded-pill" onclick="switchTab('search', this)" href="#"><i
+                        class="bi bi-search"></i> Search</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" onclick="switchTab('routes')"><i class="bi bi-map"></i> Routes</a>
+                <a class="nav-link rounded-pill" onclick="switchTab('routes', this)" href="#"><i class="bi bi-map"></i>
+                    Routes</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" onclick="switchTab('track')"><i class="bi bi-geo-alt"></i> Track</a>
+                <a class="nav-link rounded-pill" onclick="switchTab('track', this)" href="#"><i
+                        class="bi bi-geo-alt"></i> Track</a>
             </li>
         </ul>
 
         <!-- TAB CONTENT: SEARCH -->
         <div id="tab-search" class="fade-in">
             <div class="card-box">
-                <div class="section-title">Bus Ticket Search</div>
+                <h5 class="card-title"><i class="bi bi-ticket-perforated"></i> Find Bus</h5>
 
                 <form id="ticketForm">
                     <datalist id="stationList"></datalist>
 
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">From</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"><i
-                                    class="bi bi-circle text-success"></i></span>
-                            <input type="text" id="ticketFrom" list="stationList" class="form-control border-start-0"
-                                placeholder="Source Station" required>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted fw-bold">FROM</label>
+                            <input type="text" id="ticketFrom" list="stationList" class="form-control"
+                                placeholder="Source" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted fw-bold">TO</label>
+                            <input type="text" id="ticketTo" list="stationList" class="form-control"
+                                placeholder="Destination" required>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">To</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"><i
-                                    class="bi bi-geo-alt text-danger"></i></span>
-                            <input type="text" id="ticketTo" list="stationList" class="form-control border-start-0"
-                                placeholder="Destination Station" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
+                    <div class="mb-4">
+                        <label class="form-label small text-muted fw-bold">SERVICE TYPE</label>
                         <select id="ticketService" class="form-select">
-                            <option value="">Any Service Type</option>
+                            <option value="">Any Type</option>
                             <option value="express">Express</option>
                             <option value="metro">Metro</option>
                             <option value="deluxe">Deluxe</option>
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Find Buses
+                    <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">
+                        <i class="bi bi-search"></i> Search Buses
                     </button>
                 </form>
             </div>
@@ -94,45 +93,57 @@
 
         <!-- TAB CONTENT: ROUTES -->
         <div id="tab-routes" class="fade-in" style="display: none;">
-            <div class="card-box">
-                <div class="section-title">All Available Routes</div>
-                <div class="d-grid gap-2">
-                    <button id="viewRoutesBtn" class="btn btn-outline-danger">Load All Routes</button>
-                    <div id="routesResult" class="mt-3"></div>
-                </div>
+            <div class="card-box text-center">
+                <h5 class="card-title justify-content-center"><i class="bi bi-shuffle"></i> Explore Routes</h5>
+                <p class="text-muted small mb-4">View all active routes and active buses currently running in the city.
+                </p>
+
+                <button id="viewRoutesBtn" class="btn btn-outline-primary rounded-pill px-4">
+                    <i class="bi bi-cloud-download"></i> Load All Routes
+                </button>
+
+                <div id="routesResult" class="mt-4 text-start"></div>
             </div>
         </div>
 
         <!-- TAB CONTENT: TRACKING -->
         <div id="tab-track" class="fade-in" style="display: none;">
             <div class="card-box">
-                <div class="section-title">Live Tracking</div>
+                <h5 class="card-title"><i class="bi bi-broadcast"></i> Live Tracking</h5>
 
-                <div class="toggle-wrapper" id="trackingToggle">
-                    <div class="toggle-option active" data-type="service">By Service</div>
-                    <div class="toggle-option" data-type="vehicle">By Vehicle</div>
+                <div class="text-center mb-4">
+                    <div class="toggle-container">
+                        <div class="toggle-option active" data-type="service" onclick="setSearchType('service', this)">
+                            By Service</div>
+                        <div class="toggle-option" data-type="vehicle" onclick="setSearchType('vehicle', this)">By
+                            Vehicle</div>
+                    </div>
                 </div>
 
-                <div class="input-group mb-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Enter Number...">
-                    <button id="searchBtn" class="btn btn-primary" style="margin-top: 0; width: auto;">Track</button>
+                <div class="input-group mb-3 shadow-sm rounded-pill overflow-hidden">
+                    <input type="text" id="searchInput" class="form-control border-0 ps-4"
+                        placeholder="Enter Service No (e.g. 28A)...">
+                    <button id="searchBtn" class="btn btn-primary px-4 border-0">Track</button>
                 </div>
 
                 <div id="trackingResult"></div>
             </div>
 
             <div class="card-box mt-3">
-                <div class="section-title">Timetable</div>
-                <form id="timetableForm">
-                    <div class="input-group mb-2">
-                        <input type="text" id="timetableFrom" list="stationList" class="form-control" placeholder="From"
-                            required>
+                <h5 class="card-title"><i class="bi bi-clock"></i> Quick Timetable</h5>
+                <form id="timetableForm" class="row g-2">
+                    <div class="col-5">
+                        <input type="text" id="timetableFrom" list="stationList" class="form-control form-control-sm"
+                            placeholder="From" required>
                     </div>
-                    <div class="input-group mb-2">
-                        <input type="text" id="timetableTo" list="stationList" class="form-control" placeholder="To"
-                            required>
+                    <div class="col-5">
+                        <input type="text" id="timetableTo" list="stationList" class="form-control form-control-sm"
+                            placeholder="To" required>
                     </div>
-                    <button type="submit" class="btn btn-outline-dark w-100">Check Timetable</button>
+                    <div class="col-2">
+                        <button type="submit" class="btn btn-secondary btn-sm w-100 rounded-circle"
+                            style="height: 34px;"><i class="bi bi-arrow-right"></i></button>
+                    </div>
                 </form>
                 <div id="timetableResult" class="mt-3"></div>
             </div>
@@ -140,9 +151,9 @@
 
     </div>
 
-    <!-- TAB SWITCHING LOGIC (Simple inline for UI state) -->
+    <!-- TAB SWITCHING LOGIC -->
     <script>
-        function switchTab(tabName) {
+        function switchTab(tabName, clickedLink) {
             // Stop live tracking if switching away
             if (typeof trackingInterval !== 'undefined' && trackingInterval) {
                 clearInterval(trackingInterval);
@@ -159,21 +170,19 @@
             // Show selected tab
             document.getElementById('tab-' + tabName).style.display = 'block';
 
-            // Activate selected nav link (this is a bit hacky selector but works for demo)
-            event.currentTarget.classList.add('active');
+            // Activate clicked link
+            if (clickedLink) clickedLink.classList.add('active');
         }
 
-        // Toggle logic for Service/Vehicle
-        document.querySelectorAll('.toggle-option').forEach(opt => {
-            opt.addEventListener('click', function () {
-                document.querySelectorAll('.toggle-option').forEach(o => o.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
+        // Search Type Toggle
+        function setSearchType(type, element) {
+            document.querySelectorAll('.toggle-option').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
     </script>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="/static/main_bundle.js?v=4.3"></script>
+    <script src="/static/main_bundle.js?v=4.4"></script>
 </body>
 
 </html>
