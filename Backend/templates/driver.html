@@ -92,7 +92,7 @@
             statusContainer.classList.remove("status-error");
             statusBox.querySelector(".status-text").innerHTML = `Connecting GPS... 🛰️`;
 
-            log("Starting tracking for " + serviceNo + "...");
+            log("Requesting GPS access...");
 
             const options = {
                 enableHighAccuracy: true,
@@ -100,36 +100,51 @@
                 maximumAge: 0
             };
 
+            // Success Callback
+            const onLocationSuccess = (pos) => {
+                const { latitude, longitude, speed } = pos.coords;
+                // speed is in m/s, convert to km/h, default to 0 if null
+                const speedKmph = speed ? (speed * 3.6).toFixed(1) : 0;
+
+                updateBackend(serviceNo, latitude, longitude, speedKmph);
+
+                statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
+                statusContainer.classList.add("status-active", "pulse");
+                statusContainer.classList.remove("status-error");
+            };
+
+            // Error Callback
+            const onLocationError = (err) => {
+                console.error(err);
+                log("⚠️ GPS Error (" + err.code + "): " + err.message);
+
+                if (err.code === 1) {
+                    alert("Please allow Location Access to share live tracking.");
+                } else if (err.code === 3) {
+                    log("⚠️ High accuracy timed out. Trying low accuracy...");
+                    // Fallback to low accuracy
+                    navigator.geolocation.getCurrentPosition(
+                        onLocationSuccess,
+                        (e) => {
+                            log("❌ Low accuracy failed too: " + e.message);
+                            statusBox.querySelector(".status-text").innerHTML = "GPS Failed 🔴";
+                            statusContainer.classList.add("status-error");
+                        },
+                        { enableHighAccuracy: false, timeout: 15000 }
+                    );
+                    return; // Don't stop, try fallback
+                }
+
+                statusContainer.classList.remove("status-active", "pulse");
+                statusContainer.classList.add("status-error");
+                statusBox.querySelector(".status-text").innerHTML = "GPS Error 🔴";
+            };
+
             // Force immediate update
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const { latitude, longitude, speed } = pos.coords;
-                    updateBackend(serviceNo, latitude, longitude, (speed * 3.6).toFixed(1));
-                    statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
-                },
-                (err) => log("⚠️ Initial GPS Lock failed: " + err.message),
-                options
-            );
+            navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError, options);
 
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const { latitude, longitude, speed } = position.coords;
-                    // speed is in m/s, convert to km/h
-                    const speedKmph = speed ? (speed * 3.6).toFixed(1) : 0;
-
-                    updateBackend(serviceNo, latitude, longitude, speedKmph);
-                    statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
-                },
-                (error) => {
-                    console.error(error);
-                    log("⚠️ GPS Error: " + error.message);
-
-                    statusContainer.classList.remove("status-active", "pulse");
-                    statusContainer.classList.add("status-error");
-                    statusBox.querySelector(".status-text").innerHTML = "GPS Signal Lost 🔴";
-                },
-                options
-            );
+            // Start Watching
+            watchId = navigator.geolocation.watchPosition(onLocationSuccess, onLocationError, options);
         });
 
         stopBtn.addEventListener("click", () => {
