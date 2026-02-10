@@ -90,15 +90,26 @@
 
             statusContainer.classList.add("status-active", "pulse");
             statusContainer.classList.remove("status-error");
-            statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
+            statusBox.querySelector(".status-text").innerHTML = `Connecting GPS... 🛰️`;
 
             log("Starting tracking for " + serviceNo + "...");
 
             const options = {
                 enableHighAccuracy: true,
-                timeout: 5000,
+                timeout: 10000,
                 maximumAge: 0
             };
+
+            // Force immediate update
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude, longitude, speed } = pos.coords;
+                    updateBackend(serviceNo, latitude, longitude, (speed * 3.6).toFixed(1));
+                    statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
+                },
+                (err) => log("⚠️ Initial GPS Lock failed: " + err.message),
+                options
+            );
 
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
@@ -107,6 +118,7 @@
                     const speedKmph = speed ? (speed * 3.6).toFixed(1) : 0;
 
                     updateBackend(serviceNo, latitude, longitude, speedKmph);
+                    statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
                 },
                 (error) => {
                     console.error(error);
