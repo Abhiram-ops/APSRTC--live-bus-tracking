@@ -205,12 +205,19 @@ async function updateMapLocation(serviceNo) {
 
         // Create or Update Marker
         if (!trackingMarker) {
-            trackingMarker = L.marker([lat, lng], { icon: busIcon }).addTo(trackingMap)
+            // Use default marker for reliability
+            trackingMarker = L.marker([lat, lng]).addTo(trackingMap)
                 .bindPopup(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`)
                 .openPopup();
+
+            // Pan to bus immediately on first find
+            trackingMap.setView([lat, lng], 15);
         } else {
             trackingMarker.setLatLng([lat, lng]);
             trackingMarker.setPopupContent(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`);
+
+            // Keep map centered on bus
+            trackingMap.panTo([lat, lng]);
         }
 
     } catch (err) {
