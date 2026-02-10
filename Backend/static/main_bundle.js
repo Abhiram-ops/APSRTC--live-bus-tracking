@@ -186,7 +186,8 @@ async function drawRouteOnMap(serviceNo) {
 
 async function updateMapLocation(serviceNo) {
     try {
-        const res = await fetch(`${API_BASE}/api/live/${serviceNo}`);
+        // Add timestamp to prevent caching
+        const res = await fetch(`${API_BASE}/api/live/${serviceNo}?t=${Date.now()}`);
         if (!res.ok) {
             // Bus not live yet - ok to fail silently, map is already showing route
             document.getElementById("updatedValue").innerHTML = `<i class="bi bi-clock-history"></i> Status: Waiting for driver...`;
