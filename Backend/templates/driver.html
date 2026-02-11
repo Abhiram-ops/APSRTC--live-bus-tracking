@@ -35,7 +35,7 @@
                 <button id="startBtn" class="btn btn-success btn-lg shadow-sm">
                     <i class="bi bi-broadcast"></i> Start Sharing
                 </button>
-                <button id="stopBtn" class="btn btn-secondary btn-lg" disabled>
+                <button id="stopBtn" class="btn btn-danger btn-lg" style="display: none;">
                     <i class="bi bi-stop-circle"></i> Stop Sharing
                 </button>
             </div>
@@ -58,7 +58,6 @@
         const startBtn = document.getElementById("startBtn");
         const stopBtn = document.getElementById("stopBtn");
         const serviceSelect = document.getElementById("serviceSelect");
-        const statusBox = document.getElementById("statusBox");
         const statusContainer = document.getElementById("statusContainer");
         const debugLog = document.getElementById("debugLog");
 
@@ -163,7 +162,7 @@
             serviceSelect.disabled = false;
 
             statusContainer.classList.remove("status-active", "pulse", "status-error");
-            statusContainer.querySelector(".status-text").innerHTML = "Offline ⚪";
+            statusContainer.querySelector(".status-text").innerHTML = "Inactive ⚪";
 
             log("Stopped tracking.");
         }
