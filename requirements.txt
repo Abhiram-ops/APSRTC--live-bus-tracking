@@ -4,3 +4,4 @@ gunicorn==21.2.0
 python-dotenv
 flask-talisman
 flask-limiter
+flask-caching==2.1.0

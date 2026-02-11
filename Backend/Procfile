@@ -1,1 +1,1 @@
-web: gunicorn backend:app
+web: gunicorn Backend.backend:app --workers 4 --threads 2 --worker-class gthread --timeout 120 --preload --log-level info

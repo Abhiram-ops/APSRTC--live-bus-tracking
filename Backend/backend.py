@@ -1,10 +1,12 @@
 import os
 from flask import Flask, jsonify, request, render_template, session, redirect, url_for
 from flask_cors import CORS
+from flask_caching import Cache
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import time
 import threading
+from contextlib import contextmanager
 from dotenv import load_dotenv
 from flask_talisman import Talisman
 from flask_limiter import Limiter
@@ -18,6 +20,11 @@ app = Flask(__name__)
 Talisman(app, content_security_policy=None, force_https=False)  # Set force_https=True in prod
 # Rate Limiting
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
+# Caching Configuration
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 300
+})
 
 app.secret_key = os.getenv("SECRET_KEY", "fallback_dev_key")
 CORS(app)
@@ -38,8 +45,29 @@ else:
     import init_db
     init_db.migrate()
 
+# Thread-local storage for database connections
+_thread_local = threading.local()
+
 def get_db():
-    return sqlite3.connect(DB)
+    """Get a database connection from thread-local storage (connection pooling)"""
+    if not hasattr(_thread_local, 'connection'):
+        _thread_local.connection = sqlite3.connect(DB, check_same_thread=False)
+        _thread_local.connection.row_factory = sqlite3.Row
+    return _thread_local.connection
+
+@contextmanager
+def get_db_cursor():
+    """Context manager for database operations with auto-commit/rollback"""
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        yield cursor
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
 
 # -----------------------------
 # HOME
@@ -558,6 +586,7 @@ def simulate_live():
 # 🛣️ ROUTES LIST & AUTOCOMPLETE
 # -----------------------------
 @app.route("/api/routes")
+@cache.cached(timeout=600)  # Cache for 10 minutes
 def get_all_routes():
     db = get_db()
     cur = db.cursor()
@@ -575,6 +604,7 @@ def get_all_routes():
     return jsonify(result)
 
 @app.route("/api/stations")
+@cache.cached(timeout=600)  # Cache for 10 minutes
 def get_all_stations():
     db = get_db()
     cur = db.cursor()
@@ -595,6 +625,7 @@ def get_all_stations():
 # 📊 DASHBOARD DATA
 # -----------------------------
 @app.route("/api/dashboard")
+@cache.cached(timeout=60)  # Cache for 1 minute
 def dashboard():
     db = get_db()
     cur = db.cursor()
