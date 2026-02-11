@@ -143,11 +143,11 @@ def initialize_db():
     db.commit()
     db.close()
 
-    print("✅ Database created successfully!")
+    print("[OK] Database created successfully!")
 
 def migrate():
     """Safely create tables if they don't exist, without dropping data."""
-    print(f"🔄 Checking/Migrating Database at {DB_NAME}...")
+    print(f"[...] Checking/Migrating Database at {DB_NAME}...")
     db = sqlite3.connect(DB_NAME)
     cur = db.cursor()
 
@@ -171,7 +171,7 @@ def migrate():
 
     db.commit()
     db.close()
-    print("✅ Migration complete!")
+    print("[OK] Migration complete!")
 
 if __name__ == "__main__":
     initialize_db()

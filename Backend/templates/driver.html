@@ -90,7 +90,7 @@
 
             statusContainer.classList.add("status-active", "pulse");
             statusContainer.classList.remove("status-error");
-            statusBox.querySelector(".status-text").innerHTML = `Connecting GPS... 🛰️`;
+            statusContainer.querySelector(".status-text").innerHTML = `Connecting GPS... 🛰️`;
 
             log("Requesting GPS access...");
 
@@ -108,7 +108,7 @@
 
                 updateBackend(serviceNo, latitude, longitude, speedKmph);
 
-                statusBox.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
+                statusContainer.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
                 statusContainer.classList.add("status-active", "pulse");
                 statusContainer.classList.remove("status-error");
             };
@@ -127,7 +127,7 @@
                         onLocationSuccess,
                         (e) => {
                             log("❌ Low accuracy failed too: " + e.message);
-                            statusBox.querySelector(".status-text").innerHTML = "GPS Failed 🔴";
+                            statusContainer.querySelector(".status-text").innerHTML = "GPS Failed 🔴";
                             statusContainer.classList.add("status-error");
                         },
                         { enableHighAccuracy: false, timeout: 15000 }
@@ -137,7 +137,7 @@
 
                 statusContainer.classList.remove("status-active", "pulse");
                 statusContainer.classList.add("status-error");
-                statusBox.querySelector(".status-text").innerHTML = "GPS Error 🔴";
+                statusContainer.querySelector(".status-text").innerHTML = "GPS Error 🔴";
             };
 
             // Force immediate update
@@ -163,7 +163,7 @@
             serviceSelect.disabled = false;
 
             statusContainer.classList.remove("status-active", "pulse", "status-error");
-            statusBox.querySelector(".status-text").innerHTML = "Offline ⚪";
+            statusContainer.querySelector(".status-text").innerHTML = "Offline ⚪";
 
             log("Stopped tracking.");
         }
@@ -203,7 +203,7 @@
 
                     statusContainer.classList.remove("status-active", "pulse");
                     statusContainer.classList.add("status-error");
-                    statusBox.querySelector(".status-text").innerHTML = "Error 🔴";
+                    statusContainer.querySelector(".status-text").innerHTML = "Error 🔴";
                 }
             } catch (err) {
                 log("❌ Network Error: " + err.message);

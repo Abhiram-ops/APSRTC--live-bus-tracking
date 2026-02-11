@@ -29,12 +29,12 @@ DB = os.path.join(BASE_DIR, "apsrtc.db")
 # Auto-Initialize Database if missing
 # Auto-Initialize Database if missing
 if not os.path.exists(DB):
-    print(f"⚠️ Database not found at {DB}. Creating it...")
+    print(f"[!] Database not found at {DB}. Creating it...")
     import init_db
     init_db.initialize_db()
 else:
     # Run migration key tables even if DB exists
-    print(f"✅ Database found. Checking for updates...")
+    print(f"[OK] Database found. Checking for updates...")
     import init_db
     init_db.migrate()
 
