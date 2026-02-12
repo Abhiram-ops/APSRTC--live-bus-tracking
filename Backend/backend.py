@@ -122,7 +122,6 @@ def search_buses():
 
     cur.execute(query, params)
     rows = cur.fetchall()
-    db.close()
 
     result = []
     for row in rows:
@@ -153,7 +152,6 @@ def get_service(service_no):
     """, (service_no,))
 
     row = cur.fetchone()
-    db.close()
 
     if not row:
         return jsonify({"error": "Service not found"}), 404
@@ -178,7 +176,6 @@ def get_vehicle(vehicle_no):
     """, (vehicle_no,))
 
     row = cur.fetchone()
-    db.close()
 
     if not row:
         return jsonify({"error": "Vehicle not found"}), 404
@@ -213,7 +210,6 @@ def timetable():
     """, (f"%{from_station}%", f"%{to_station}%", f"%{to_station}%", f"%{from_station}%"))
 
     rows = cur.fetchall()
-    db.close()
 
     result = []
     for row in rows:
@@ -239,7 +235,6 @@ def live_tracking(service_no):
     """, (service_no,))
 
     row = cur.fetchone()
-    db.close()
 
     if not row:
         return jsonify({"error": "Live data not found"}), 404
@@ -270,7 +265,6 @@ def route_details(service_no):
     """, (service_no,))
 
     rows = cur.fetchall()
-    db.close()
 
     if not rows:
         return jsonify({"error": "Route details not found"}), 404
@@ -295,7 +289,6 @@ def calculate_eta(service_no):
     """, (service_no,))
 
     row = cur.fetchone()
-    db.close()
 
     if not row:
         return jsonify({"error": "ETA data not found"}), 404
@@ -326,7 +319,6 @@ def add_route():
                 (data["route_name"], data["from"], data["to"]))
 
     db.commit()
-    db.close()
 
     return jsonify({"message": "Route added successfully"})
 
@@ -344,7 +336,6 @@ def add_service():
                 (data["service_no"], data["route_id"], data["service_type"]))
 
     db.commit()
-    db.close()
 
     return jsonify({"message": "Service added successfully"})
 
@@ -362,7 +353,6 @@ def add_vehicle():
                 (data["vehicle_no"], data["service_id"], data["status"]))
 
     db.commit()
-    db.close()
 
     return jsonify({"message": "Vehicle added successfully"})
 
@@ -394,7 +384,7 @@ def user_register():
         cur = db.cursor()
         cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
         db.commit()
-        db.close()
+
         return jsonify({"message": "Registration successful! Please login."})
     except sqlite3.IntegrityError:
         return jsonify({"error": "Username already exists"}), 409
@@ -413,7 +403,6 @@ def user_login():
     cur = db.cursor()
     cur.execute("SELECT id, password FROM users WHERE username = ?", (username,))
     user = cur.fetchone()
-    db.close()
 
     if user and check_password_hash(user[1], password):
         session.clear()
@@ -460,7 +449,7 @@ def driver_register():
         cur = db.cursor()
         cur.execute("INSERT INTO drivers (username, password) VALUES (?, ?)", (username, hashed_pw))
         db.commit()
-        db.close()
+
         return jsonify({"message": "Registration successful! Please login."})
     except sqlite3.IntegrityError:
         return jsonify({"error": "Username already exists"}), 409
@@ -478,7 +467,6 @@ def driver_login():
     cur = db.cursor()
     cur.execute("SELECT id, password FROM drivers WHERE username = ?", (username,))
     user = cur.fetchone()
-    db.close()
 
     if user and check_password_hash(user[1], password):
         session.clear()  # Clear any existing session data
@@ -543,7 +531,7 @@ def update_location():
         
         row = cur.fetchone()
         if not row:
-            db.close()
+
             return jsonify({"error": "Service/Vehicle not found"}), 404
 
         vehicle_id = row[0]
@@ -557,7 +545,6 @@ def update_location():
 
         db.commit()
         affected_rows = cur.rowcount
-        db.close()
 
         log_entry = f"{time.strftime('%H:%M:%S')}: [OK] Updated DB for vehicle {vehicle_id} ({affected_rows} rows)"
         print(log_entry, flush=True)
@@ -587,7 +574,7 @@ def simulate_live():
         """, (time.strftime("%Y-%m-%d %H:%M:%S"),))
 
         db.commit()
-        db.close()
+
         time.sleep(5)
 
 
@@ -601,7 +588,6 @@ def get_all_routes():
     cur = db.cursor()
     cur.execute("SELECT route_name, from_station, to_station FROM routes")
     rows = cur.fetchall()
-    db.close()
 
     result = []
     for row in rows:
@@ -624,7 +610,6 @@ def get_all_stations():
         SELECT to_station FROM routes
     """)
     rows = cur.fetchall()
-    db.close()
 
     stations = [row[0] for row in rows]
     return jsonify(stations)
@@ -650,8 +635,6 @@ def dashboard():
 
     cur.execute("SELECT COUNT(*) FROM vehicles WHERE status='Running'")
     running = cur.fetchone()[0]
-
-    db.close()
 
     return jsonify({
         "total_routes": routes,
