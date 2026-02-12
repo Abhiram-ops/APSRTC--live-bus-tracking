@@ -8,7 +8,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "apsrtc.db")
 
 def initialize_db():
-    print(f"⏳ Initializing Database at {DB_NAME}...")
+    print(f"[...] Initializing Database at {DB_NAME}...")
     db = sqlite3.connect(DB_NAME)
     cur = db.cursor()
 
@@ -76,7 +76,7 @@ def initialize_db():
     # LIVE LOCATION
     cur.execute("""
     CREATE TABLE IF NOT EXISTS live_location (
-        bus_id INTEGER,
+        bus_id INTEGER PRIMARY KEY,
         lat REAL,
         lng REAL,
         speed INTEGER,
@@ -168,6 +168,54 @@ def migrate():
         password TEXT NOT NULL
     )
     """)
+
+    # Fix live_location table - recreate with PRIMARY KEY if needed
+    cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='live_location'")
+    result = cur.fetchone()
+    
+    if result:
+        table_schema = result[0]
+        # Check if PRIMARY KEY is missing
+        if 'PRIMARY KEY' not in table_schema:
+            print("[!] Fixing live_location table schema...")
+            # Backup existing data
+            cur.execute("SELECT bus_id, lat, lng, speed, updated_at FROM live_location")
+            backup_data = cur.fetchall()
+            
+            # Drop and recreate with PRIMARY KEY
+            cur.execute("DROP TABLE live_location")
+            cur.execute("""
+            CREATE TABLE live_location (
+                bus_id INTEGER PRIMARY KEY,
+                lat REAL,
+                lng REAL,
+                speed INTEGER,
+                updated_at TEXT
+            )
+            """)
+            
+            # Restore data (only keep latest entry per bus_id)
+            seen_buses = set()
+            for row in reversed(backup_data):  # Process in reverse to keep latest
+                if row[0] not in seen_buses:
+                    cur.execute("""
+                        INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, row)
+                    seen_buses.add(row[0])
+            
+            print("[OK] live_location table fixed!")
+    else:
+        # Table doesn't exist, create it with PRIMARY KEY
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS live_location (
+            bus_id INTEGER PRIMARY KEY,
+            lat REAL,
+            lng REAL,
+            speed INTEGER,
+            updated_at TEXT
+        )
+        """)
 
     db.commit()
     db.close()

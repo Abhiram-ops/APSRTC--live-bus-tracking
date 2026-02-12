@@ -95,8 +95,8 @@
 
             const options = {
                 enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+                timeout: 15000,  // Increased timeout for better reliability
+                maximumAge: 0    // Always get fresh location data
             };
 
             // Success Callback
@@ -167,12 +167,11 @@
             log("Stopped tracking.");
         }
 
-        async function updateBackend(serviceNo, lat, lng, speed) {
+        let updateRetryCount = 0;
+        const MAX_RETRIES = 3;
+
+        async function updateBackend(serviceNo, lat, lng, speed, retryAttempt = 0) {
             try {
-                /* 
-                   In a real deployment with separate frontend/backend domains, 
-                   use the full URL. Here relative path works. 
-                */
                 const response = await fetch('/api/update_location', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -187,6 +186,14 @@
                 if (response.ok) {
                     const data = await response.json();
                     log(`✅ Sent: ${lat.toFixed(5)}, ${lng.toFixed(5)} (${speed} km/h)`);
+                    updateRetryCount = 0;  // Reset retry counter on success
+
+                    // Ensure status shows active
+                    if (!statusContainer.classList.contains("status-active")) {
+                        statusContainer.classList.add("status-active", "pulse");
+                        statusContainer.classList.remove("status-error");
+                        statusContainer.querySelector(".status-text").innerHTML = `Live 🟢 <br><small>Sharing for ${serviceNo}</small>`;
+                    }
                 } else {
                     let errorMessage = "Status " + response.status;
                     try {
@@ -200,12 +207,30 @@
                     log("❌ Error: " + errorMessage);
                     console.error("Backend Error:", errorMessage);
 
-                    statusContainer.classList.remove("status-active", "pulse");
-                    statusContainer.classList.add("status-error");
-                    statusContainer.querySelector(".status-text").innerHTML = "Error 🔴";
+                    // Retry logic for server errors
+                    if (retryAttempt < MAX_RETRIES && response.status >= 500) {
+                        const delay = Math.pow(2, retryAttempt) * 1000;  // Exponential backoff
+                        log(`⏳ Retrying in ${delay / 1000}s... (Attempt ${retryAttempt + 1}/${MAX_RETRIES})`);
+                        setTimeout(() => updateBackend(serviceNo, lat, lng, speed, retryAttempt + 1), delay);
+                    } else {
+                        statusContainer.classList.remove("status-active", "pulse");
+                        statusContainer.classList.add("status-error");
+                        statusContainer.querySelector(".status-text").innerHTML = "Error 🔴";
+                    }
                 }
             } catch (err) {
                 log("❌ Network Error: " + err.message);
+
+                // Retry on network errors
+                if (retryAttempt < MAX_RETRIES) {
+                    const delay = Math.pow(2, retryAttempt) * 1000;  // Exponential backoff
+                    log(`⏳ Retrying in ${delay / 1000}s... (Attempt ${retryAttempt + 1}/${MAX_RETRIES})`);
+                    setTimeout(() => updateBackend(serviceNo, lat, lng, speed, retryAttempt + 1), delay);
+                } else {
+                    statusContainer.classList.remove("status-active", "pulse");
+                    statusContainer.classList.add("status-error");
+                    statusContainer.querySelector(".status-text").innerHTML = "Network Error 🔴";
+                }
             }
         }
         async function logout() {

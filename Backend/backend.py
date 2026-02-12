@@ -27,6 +27,14 @@ cache = Cache(app, config={
 })
 
 app.secret_key = os.getenv("SECRET_KEY", "fallback_dev_key")
+
+# Session Configuration
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Sessions last 7 days
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 CORS(app)
 
 # Absolute path for Database
@@ -92,7 +100,7 @@ def user_login_page():
 def search_buses():
     from_station = request.args.get("from")
     to_station = request.args.get("to")
-    service_type = request.args.get("service")   # ✅ FIXED
+    service_type = request.args.get("service")   # FIXED
 
     db = get_db()
     cur = db.cursor()
@@ -473,8 +481,11 @@ def driver_login():
     db.close()
 
     if user and check_password_hash(user[1], password):
+        session.clear()  # Clear any existing session data
         session["driver_id"] = user[0]
         session["username"] = username
+        session.permanent = True  # Make session persistent
+        print(f"[DEBUG] Driver logged in: {username} (ID: {user[0]})", flush=True)
         return jsonify({"message": "Login successful", "redirect": "/driver"})
     
     return jsonify({"error": "Invalid credentials"}), 401
@@ -538,23 +549,21 @@ def update_location():
         vehicle_id = row[0]
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
-        # Update or Insert Live Location
+        # Use REPLACE INTO for atomic upsert (works with PRIMARY KEY)
         cur.execute("""
-            UPDATE live_location 
-            SET lat=?, lng=?, speed=?, updated_at=?
-            WHERE bus_id=?
-        """, (lat, lng, speed, timestamp, vehicle_id))
-
-        if cur.rowcount == 0:
-             cur.execute("""
-            INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
+            REPLACE INTO live_location (bus_id, lat, lng, speed, updated_at)
             VALUES (?, ?, ?, ?, ?)
         """, (vehicle_id, lat, lng, speed, timestamp))
 
         db.commit()
+        affected_rows = cur.rowcount
         db.close()
 
-        return jsonify({"message": "Location updated", "time": timestamp})
+        log_entry = f"{time.strftime('%H:%M:%S')}: [OK] Updated DB for vehicle {vehicle_id} ({affected_rows} rows)"
+        print(log_entry, flush=True)
+        DEBUG_LOGS.append(log_entry)
+
+        return jsonify({"message": "Location updated", "time": timestamp, "vehicle_id": vehicle_id})
 
     except Exception as e:
         import traceback
