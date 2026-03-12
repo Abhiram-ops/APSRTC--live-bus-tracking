@@ -39,6 +39,7 @@ jobs:
       # ── 5. Zip artifact for deployment ───────────────────────────
       - name: Zip deployment package
         run: |
+          cp requirements.txt Backend/
           cd Backend
           zip -r ../release.zip . -x "*.pyc" -x "__pycache__/*" -x ".venv/*" -x "*.db"
 
