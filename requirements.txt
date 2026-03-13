@@ -5,3 +5,5 @@ python-dotenv
 flask-talisman
 flask-limiter
 flask-caching==2.1.0
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.9

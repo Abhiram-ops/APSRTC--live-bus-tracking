@@ -235,3 +235,88 @@ body {
         font-size: 1rem;
     }
 }
+
+/* Linear Route Timeline UI */
+.route-timeline {
+    position: relative;
+    padding: 20px 0;
+    margin: 20px 0;
+    background: #f9fbff;
+    border-radius: 12px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.03);
+    border: 1px solid #e1e8f5;
+}
+
+.timeline-line {
+    position: absolute;
+    left: 45px;
+    top: 30px;
+    bottom: 30px;
+    width: 6px;
+    background: #c3d6f7;
+    border-radius: 4px;
+    z-index: 1;
+}
+
+.timeline-stop {
+    position: relative;
+    min-height: 80px;
+    padding-left: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    z-index: 5;
+}
+
+.stop-node {
+    position: absolute;
+    left: 41px;
+    top: 5px;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border: 3px solid #1a73e8;
+    border-radius: 50%;
+    z-index: 5;
+    box-shadow: 0 0 0 4px #f9fbff;
+}
+
+.timeline-stop.terminal .stop-node {
+    border-color: #ff6600;
+    width: 18px;
+    height: 18px;
+    left: 39px;
+}
+
+.stop-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.05rem;
+    margin-bottom: 2px;
+}
+
+.stop-dist {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+/* Moving Bus Icon on the Timeline */
+.bus-tracker-icon {
+    position: absolute;
+    left: 23px; /* Centers the 50px icon over the line */
+    width: 50px;
+    height: 50px;
+    background: white;
+    border: 2px solid #1a73e8;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3);
+    transition: top 2s ease-in-out; 
+}
+
+.bus-tracker-icon img {
+    width: 30px;
+}

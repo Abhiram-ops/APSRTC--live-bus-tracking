@@ -1,228 +1,77 @@
-import sqlite3
 import os
+from flask import Flask
+from models import db, Route, Service, Vehicle, Stop, TimetableEntry, Driver, User, LiveLocation
 
-import os
-
-# Use absolute path relative to this script
-if os.getenv("FLASK_ENV", "development") == "production":
-    DB_NAME = "/home/apsrtc.db"
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DB_NAME = os.path.join(BASE_DIR, "apsrtc.db")
+def create_app():
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+    return app
 
 def initialize_db():
-    print(f"[...] Initializing Database at {DB_NAME}...")
-    db = sqlite3.connect(DB_NAME)
-    cur = db.cursor()
+    app = create_app()
+    with app.app_context():
+        print("[...] Initializing PostgreSQL Database...")
+        # Create all tables if they don't exist
+        db.create_all()
 
-    # DROP TABLES IF EXIST (To avoid duplicates)
-    cur.execute("DROP TABLE IF EXISTS routes")
-    cur.execute("DROP TABLE IF EXISTS services")
-    cur.execute("DROP TABLE IF EXISTS vehicles")
-    cur.execute("DROP TABLE IF EXISTS stops")
-    cur.execute("DROP TABLE IF EXISTS timetable")
-    cur.execute("DROP TABLE IF EXISTS live_location")
+        # Insert sample data ONLY if the tables are empty
+        if Route.query.count() == 0:
+            print("[...] Inserting sample data...")
+            # Routes
+            r1 = Route(route_name='Gajuwaka → Beach Road', from_station='Gajuwaka', to_station='Beach Road')
+            r2 = Route(route_name='Maddilapalem → Simhachalam', from_station='Maddilapalem', to_station='Simhachalam')
+            r3 = Route(route_name='RTC Complex → Railway Station', from_station='RTC Complex', to_station='Railway Station')
+            db.session.add_all([r1, r2, r3])
+            db.session.commit()
 
-    # ROUTES
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS routes (
-        route_id INTEGER PRIMARY KEY,
-        route_name TEXT,
-        from_station TEXT,
-        to_station TEXT
-    )
-    """)
+            # Services
+            s1 = Service(service_no='28A', route_id=r1.route_id, service_type='Express', ticket_price=30)
+            s2 = Service(service_no='6K', route_id=r2.route_id, service_type='Metro', ticket_price=20)
+            s3 = Service(service_no='400K', route_id=r3.route_id, service_type='Deluxe', ticket_price=50)
+            db.session.add_all([s1, s2, s3])
+            db.session.commit()
 
-    # SERVICES
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS services (
-        service_id INTEGER PRIMARY KEY,
-        service_no TEXT,
-        route_id INTEGER,
-        service_type TEXT,
-        ticket_price INTEGER
-    )
-    """)
+            # Vehicles
+            v1 = Vehicle(vehicle_no='AP31 AB 1234', service_id=s1.service_id, status='Running')
+            v2 = Vehicle(vehicle_no='AP31 CD 5678', service_id=s2.service_id, status='Running')
+            v3 = Vehicle(vehicle_no='AP31 EF 9012', service_id=s3.service_id, status='Running')
+            db.session.add_all([v1, v2, v3])
+            db.session.commit()
 
-    # VEHICLES
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS vehicles (
-        vehicle_id INTEGER PRIMARY KEY,
-        vehicle_no TEXT,
-        service_id INTEGER,
-        status TEXT
-    )
-    """)
+            # Stops (Route 1)
+            st1 = Stop(route_id=r1.route_id, stop_name='Gajuwaka', lat=17.72, lng=83.30, stop_order=1)
+            st2 = Stop(route_id=r1.route_id, stop_name='Maddilapalem', lat=17.73, lng=83.31, stop_order=2)
+            st3 = Stop(route_id=r1.route_id, stop_name='Beach Road', lat=17.75, lng=83.33, stop_order=3)
+            # Stops (Route 3)
+            st4 = Stop(route_id=r3.route_id, stop_name='RTC Complex', lat=17.72, lng=83.30, stop_order=1)
+            st5 = Stop(route_id=r3.route_id, stop_name='Railway Station', lat=17.73, lng=83.31, stop_order=2)
+            db.session.add_all([st1, st2, st3, st4, st5])
+            db.session.commit()
 
-    # STOPS
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS stops (
-        stop_id INTEGER PRIMARY KEY,
-        route_id INTEGER,
-        stop_name TEXT,
-        lat REAL,
-        lng REAL,
-        stop_order INTEGER
-    )
-    """)
+            # Timetable
+            t1 = TimetableEntry(service_id=s1.service_id, stop_id=st1.stop_id, arrival_time='10:00')
+            t2 = TimetableEntry(service_id=s1.service_id, stop_id=st2.stop_id, arrival_time='10:20')
+            t3 = TimetableEntry(service_id=s1.service_id, stop_id=st3.stop_id, arrival_time='10:45')
+            t4 = TimetableEntry(service_id=s3.service_id, stop_id=st4.stop_id, arrival_time='11:00')
+            t5 = TimetableEntry(service_id=s3.service_id, stop_id=st5.stop_id, arrival_time='11:30')
+            db.session.add_all([t1, t2, t3, t4, t5])
+            db.session.commit()
 
-    # TIMETABLE
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS timetable (
-        time_id INTEGER PRIMARY KEY,
-        service_id INTEGER,
-        stop_id INTEGER,
-        arrival_time TEXT
-    )
-    """)
-
-    # LIVE LOCATION
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS live_location (
-        bus_id INTEGER PRIMARY KEY,
-        lat REAL,
-        lng REAL,
-        speed INTEGER,
-        updated_at TEXT
-    )
-    """)
-
-    # DRIVERS
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS drivers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    )
-    """)
-
-    # USERS (Riders)
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    )
-    """)
-
-    # ---------------- SAMPLE DATA ----------------
-
-    # Routes
-    cur.execute("INSERT INTO routes VALUES (1,'Gajuwaka → Beach Road','Gajuwaka','Beach Road')")
-    cur.execute("INSERT INTO routes VALUES (2,'Maddilapalem → Simhachalam','Maddilapalem','Simhachalam')")
-    cur.execute("INSERT INTO routes VALUES (3,'RTC Complex → Railway Station','RTC Complex','Railway Station')")
-
-    # Services
-    cur.execute("INSERT INTO services VALUES (1,'28A',1,'Express', 30)")
-    cur.execute("INSERT INTO services VALUES (2,'6K',2,'Metro', 20)")
-    cur.execute("INSERT INTO services VALUES (3,'400K',3,'Deluxe', 50)")
-
-    # Vehicles
-    cur.execute("INSERT INTO vehicles VALUES (1,'AP31 AB 1234',1,'Running')")
-    cur.execute("INSERT INTO vehicles VALUES (2,'AP31 CD 5678',2,'Running')")
-    cur.execute("INSERT INTO vehicles VALUES (3,'AP31 EF 9012',3,'Running')")
-
-    # Stops (Route 1)
-    cur.execute("INSERT INTO stops VALUES (1,1,'Gajuwaka',17.72,83.30,1)")
-    cur.execute("INSERT INTO stops VALUES (2,1,'Maddilapalem',17.73,83.31,2)")
-    cur.execute("INSERT INTO stops VALUES (3,1,'Beach Road',17.75,83.33,3)")
-
-    # Stops (Route 3)
-    cur.execute("INSERT INTO stops VALUES (4,3,'RTC Complex',17.72,83.30,1)")
-    cur.execute("INSERT INTO stops VALUES (5,3,'Railway Station',17.73,83.31,2)")
-
-    # Timetable
-    cur.execute("INSERT INTO timetable VALUES (1,1,1,'10:00')")
-    cur.execute("INSERT INTO timetable VALUES (2,1,2,'10:20')")
-    cur.execute("INSERT INTO timetable VALUES (3,1,3,'10:45')")
-    cur.execute("INSERT INTO timetable VALUES (4,3,4,'11:00')")
-    cur.execute("INSERT INTO timetable VALUES (5,3,5,'11:30')")
-
-    # Live location - REMOVED dummy data so we only show real driver locations
-    # cur.execute("INSERT INTO live_location VALUES (1,17.72,83.30,35,'2026-01-23 09:00')")
-    # cur.execute("INSERT INTO live_location VALUES (2,17.73,83.31,30,'2026-01-23 09:00')")
-    # cur.execute("INSERT INTO live_location VALUES (3,17.74,83.32,40,'2026-01-23 09:00')")
-
-    db.commit()
-    db.close()
-
-    print("[OK] Database created successfully!")
+            print("[OK] Database created and seeded successfully!")
+        else:
+            print("[OK] Database tables already seeded.")
 
 def migrate():
     """Safely create tables if they don't exist, without dropping data."""
-    print(f"[...] Checking/Migrating Database at {DB_NAME}...")
-    db = sqlite3.connect(DB_NAME)
-    cur = db.cursor()
-
-    # Ensure USERS table exists (Safe to run always)
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    )
-    """)
-    
-    # Ensure DRIVERS table exists
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS drivers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    )
-    """)
-
-    # Fix live_location table - recreate with PRIMARY KEY if needed
-    cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='live_location'")
-    result = cur.fetchone()
-    
-    if result:
-        table_schema = result[0]
-        # Check if PRIMARY KEY is missing
-        if 'PRIMARY KEY' not in table_schema:
-            print("[!] Fixing live_location table schema...")
-            # Backup existing data
-            cur.execute("SELECT bus_id, lat, lng, speed, updated_at FROM live_location")
-            backup_data = cur.fetchall()
-            
-            # Drop and recreate with PRIMARY KEY
-            cur.execute("DROP TABLE live_location")
-            cur.execute("""
-            CREATE TABLE live_location (
-                bus_id INTEGER PRIMARY KEY,
-                lat REAL,
-                lng REAL,
-                speed INTEGER,
-                updated_at TEXT
-            )
-            """)
-            
-            # Restore data (only keep latest entry per bus_id)
-            seen_buses = set()
-            for row in reversed(backup_data):  # Process in reverse to keep latest
-                if row[0] not in seen_buses:
-                    cur.execute("""
-                        INSERT INTO live_location (bus_id, lat, lng, speed, updated_at)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, row)
-                    seen_buses.add(row[0])
-            
-            print("[OK] live_location table fixed!")
-    else:
-        # Table doesn't exist, create it with PRIMARY KEY
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS live_location (
-            bus_id INTEGER PRIMARY KEY,
-            lat REAL,
-            lng REAL,
-            speed INTEGER,
-            updated_at TEXT
-        )
-        """)
-
-    db.commit()
-    db.close()
-    print("[OK] Migration complete!")
+    app = create_app()
+    with app.app_context():
+        print("[...] Checking/Migrating PostgreSQL Database...")
+        db.create_all()
+        print("[OK] Migration complete!")
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
     initialize_db()

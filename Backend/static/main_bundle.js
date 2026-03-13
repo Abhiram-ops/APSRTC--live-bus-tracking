@@ -87,8 +87,35 @@ function initServiceVehicleSearch() {
                             </div>
                         </div>
 
-                        <!-- MAP CONTAINER -->
-                        <div id="map" style="height: 400px; width: 100%; margin-top: 15px; border-radius: 8px; z-index: 1;"></div>
+                        <!-- TIMELINE VS MAP TOGGLE -->
+                        <div class="d-flex justify-content-center mt-3 mb-3">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="viewToggle" id="btnTimeline" autocomplete="off" checked onchange="toggleTrackingView('timeline')">
+                                <label class="btn btn-outline-primary" for="btnTimeline"><i class="bi bi-distribute-vertical"></i> Route Progress</label>
+
+                                <input type="radio" class="btn-check" name="viewToggle" id="btnMap" autocomplete="off" onchange="toggleTrackingView('map')">
+                                <label class="btn btn-outline-primary" for="btnMap"><i class="bi bi-map"></i> GPS Map</label>
+                            </div>
+                        </div>
+
+                        <!-- TIMELINE CONTAINER (Default) -->
+                        <div id="timelineContainer" style="display: block;">
+                            <div class="text-center p-4 text-muted" id="timelineLoading">
+                                <i class="bi bi-hourglass-split spinning"></i> Loading route map...
+                            </div>
+                            <div id="routeTimelineGrid" class="route-timeline" style="display: none;">
+                                <div class="timeline-line"></div>
+                                <div id="busTrackerIcon" class="bus-tracker-icon" style="top: 0%;">
+                                    <img src="https://img.icons8.com/color/48/bus.png" alt="Bus">
+                                </div>
+                                <div id="timelineStopsWrapper"></div>
+                            </div>
+                        </div>
+
+                        <!-- MAP CONTAINER (Hidden initially) -->
+                        <div id="mapContainer" style="display: none;">
+                            <div id="map" style="height: 400px; width: 100%; border-radius: 8px; z-index: 1;"></div>
+                        </div>
                     </div>
                 `;
 
@@ -118,7 +145,28 @@ function initServiceVehicleSearch() {
     });
 }
 
+let currentRouteStops = []; // Store stops globally for logic processing
+
+// Toggle View Helper
+window.toggleTrackingView = function(view) {
+    if (view === 'timeline') {
+        document.getElementById('timelineContainer').style.display = 'block';
+        document.getElementById('mapContainer').style.display = 'none';
+    } else {
+        document.getElementById('timelineContainer').style.display = 'none';
+        document.getElementById('mapContainer').style.display = 'block';
+        if (trackingMap) {
+            trackingMap.invalidateSize(); // Fix leafet rendering issue when unhidden
+        }
+    }
+};
+
 async function startLiveMap(serviceNo) {
+    // 0. Reset UI
+    document.getElementById('timelineLoading').style.display = 'block';
+    document.getElementById('routeTimelineGrid').style.display = 'none';
+    currentRouteStops = [];
+
     // 1. Initialize Map Container immediately
     if (trackingMap) {
         trackingMap.off();
@@ -132,7 +180,7 @@ async function startLiveMap(serviceNo) {
         attribution: '© OpenStreetMap'
     }).addTo(trackingMap);
 
-    // 2. Plot Route (Polyline & Stops) - effectively sets the correct view
+    // 2. Fetch and Plot Route (Map & Timeline)
     await drawRouteOnMap(serviceNo);
 
     // 3. Initial Live Location Check
@@ -144,13 +192,25 @@ async function startLiveMap(serviceNo) {
     }, 3000);
 }
 
-// Custom Bus Icon
+// Custom Bus Icon for Leaflet
 const busIcon = L.icon({
-    iconUrl: 'https://img.icons8.com/color/48/bus.png', // Bus Icon
+    iconUrl: 'https://img.icons8.com/color/48/bus.png',
     iconSize: [40, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -20]
 });
+
+// Haversine Distance Formula (km)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
 
 // ---------------------------
 // 🛣️ OSRM ROAD-NETWORK HELPER
@@ -163,29 +223,18 @@ const busIcon = L.icon({
  */
 async function fetchOsrmRoute(waypoints) {
     try {
-        // OSRM expects coordinates as "lng,lat" pairs separated by semicolons
         const coordStr = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
         const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
 
         const res = await fetch(url);
-        if (!res.ok) {
-            console.warn('OSRM response not OK:', res.status);
-            return null;
-        }
+        if (!res.ok) return null;
 
         const data = await res.json();
-        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-            console.warn('OSRM returned no routes:', data.code);
-            return null;
-        }
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) return null;
 
-        // GeoJSON coordinates are [lng, lat] — convert to Leaflet's [lat, lng]
         const roadCoords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-        console.log(`[OSRM] Road path fetched: ${roadCoords.length} points for ${waypoints.length} waypoints`);
         return roadCoords;
-
     } catch (err) {
-        console.warn('OSRM fetch failed (will use straight-line fallback):', err.message);
         return null;
     }
 }
@@ -198,48 +247,70 @@ async function drawRouteOnMap(serviceNo) {
         const stops = await res.json();
         if (!stops || stops.length === 0) return;
 
-        const stopCoords = stops.map(s => [s.lat, s.lng]);
+        currentRouteStops = stops; // Save for timeline calc
 
-        // --- Attempt OSRM road-following path ---
-        // Use all stops as waypoints (OSRM handles up to ~100 fine).
+        // -----------------------------
+        // Populate Linear Timeline UI
+        // -----------------------------
+        const timelineWrapper = document.getElementById('timelineStopsWrapper');
+        let timelineHTML = '';
+        
+        stops.forEach((stop, index) => {
+            const isTerm = (index === 0 || index === stops.length - 1) ? 'terminal' : '';
+            timelineHTML += `
+                <div class="timeline-stop ${isTerm}" id="stop-${index}">
+                    <div class="stop-node"></div>
+                    <div class="stop-name">${stop.name}</div>
+                    <div class="stop-dist"><i class="bi bi-geo"></i> Stop ${index + 1}</div>
+                </div>
+            `;
+        });
+        
+        timelineWrapper.innerHTML = timelineHTML;
+        document.getElementById('timelineLoading').style.display = 'none';
+        document.getElementById('routeTimelineGrid').style.display = 'block';
+
+        // -----------------------------
+        // Render Geographic Map
+        // -----------------------------
+        const stopCoords = stops.map(s => [s.lat, s.lng]);
         const roadPath = await fetchOsrmRoute(stopCoords);
 
         if (roadPath && roadPath.length > 1) {
-            // ✅ Draw road-following polyline
             routeRoadPath = roadPath;
-            L.polyline(roadPath, {
-                color: '#1a73e8',
-                weight: 5,
-                opacity: 0.85,
-                lineJoin: 'round'
-            }).addTo(trackingMap);
-            console.log('[Map] Road-following polyline drawn via OSRM.');
+            L.polyline(roadPath, { color: '#1a73e8', weight: 5, opacity: 0.85, lineJoin: 'round' }).addTo(trackingMap);
         } else {
-            // ⚠️ Fallback: straight-line between stops
             routeRoadPath = stopCoords;
-            L.polyline(stopCoords, {
-                color: 'blue',
-                weight: 4,
-                opacity: 0.7,
-                dashArray: '8, 8'   // Dashed to indicate it's a straight-line estimate
-            }).addTo(trackingMap);
-            console.warn('[Map] OSRM unavailable — using straight-line fallback (dashed).');
+            L.polyline(stopCoords, { color: 'blue', weight: 4, opacity: 0.7, dashArray: '8, 8' }).addTo(trackingMap);
         }
 
-        // --- Add Stop Markers (same as before) ---
-        stops.forEach((stop, i) => {
-            const isTerminal = (i === 0 || i === stops.length - 1);
-            L.circleMarker([stop.lat, stop.lng], {
-                radius: isTerminal ? 9 : 6,
-                fillColor: isTerminal ? '#ff6600' : '#e00',
-                color: '#fff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9
-            }).addTo(trackingMap).bindPopup(`🚏 <b>${stop.name}</b>${isTerminal ? ' (Terminal)' : ''}`);
+        // --- Add Stop Markers ---
+        const smallBusIcon = L.icon({
+            iconUrl: 'https://img.icons8.com/m_outlined/200/bus.png', // Small simple bus icon
+            iconSize: [20, 20],
+            iconAnchor: [10, 10], // Center of 20x20
+            popupAnchor: [0, -10]
         });
 
-        // Fit map to the full route
+        // Use standard blue marker for start and end terminals
+        const terminalIcon = new L.Icon.Default();
+
+        stops.forEach((stop, i) => {
+            const isTerminal = (i === 0 || i === stops.length - 1);
+            
+            if (isTerminal) {
+                // Pin marker for start and end stops
+                L.marker([stop.lat, stop.lng], { icon: terminalIcon })
+                 .addTo(trackingMap)
+                 .bindPopup(`🚏 <b>${stop.name}</b> (Terminal)`);
+            } else {
+                // Small bus icon for intermediate stops
+                L.marker([stop.lat, stop.lng], { icon: smallBusIcon })
+                 .addTo(trackingMap)
+                 .bindPopup(`🚏 <b>${stop.name}</b>`);
+            }
+        });
+
         trackingMap.fitBounds(roadPath && roadPath.length > 1 ? roadPath : stopCoords);
 
     } catch (err) {
@@ -249,10 +320,8 @@ async function drawRouteOnMap(serviceNo) {
 
 async function updateMapLocation(serviceNo) {
     try {
-        // Add timestamp to prevent caching
         const res = await fetch(`${API_BASE}/api/live/${serviceNo}?t=${Date.now()}`);
         if (!res.ok) {
-            // Bus not live yet - ok to fail silently, map is already showing route
             document.getElementById("updatedValue").innerHTML = `<i class="bi bi-clock-history"></i> Status: Waiting for driver...`;
             return;
         }
@@ -267,26 +336,83 @@ async function updateMapLocation(serviceNo) {
         const lat = liveData.lat;
         const lng = liveData.lng;
 
-        // Create or Update Marker
+        // --------------------------------
+        // Update Geographical Map Marker
+        // --------------------------------
         if (!trackingMarker) {
-            // Use default marker for reliability
-            trackingMarker = L.marker([lat, lng]).addTo(trackingMap)
+            trackingMarker = L.marker([lat, lng], {icon: busIcon}).addTo(trackingMap)
                 .bindPopup(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`)
                 .openPopup();
-
-            // Pan to bus immediately on first find
             trackingMap.setView([lat, lng], 15);
         } else {
             trackingMarker.setLatLng([lat, lng]);
             trackingMarker.setPopupContent(`<b>${serviceNo}</b><br>Speed: ${liveData.speed} km/h`);
+            // trackingMap.panTo([lat, lng]); // Optional: uncomment if you want map to force pan
+        }
 
-            // Keep map centered on bus
-            trackingMap.panTo([lat, lng]);
+        // --------------------------------
+        // Update Linear Timeline Progress
+        // --------------------------------
+        if (currentRouteStops.length > 1) {
+            updateTimelineBusPosition(lat, lng);
         }
 
     } catch (err) {
         console.error("Tracking Error:", err);
     }
+}
+
+function updateTimelineBusPosition(currentLat, currentLng) {
+    if (currentRouteStops.length < 2) return;
+
+    // Find the closest stop to determine segment
+    let minDistance = Infinity;
+    let closestIndex = 0;
+
+    for (let i = 0; i < currentRouteStops.length; i++) {
+        let d = getDistance(currentLat, currentLng, currentRouteStops[i].lat, currentRouteStops[i].lng);
+        if (d < minDistance) {
+            minDistance = d;
+            closestIndex = i;
+        }
+    }
+
+    // Determine if bus is heading to next or previous stop logically
+    let segmentStartIndex = closestIndex;
+    let segmentEndIndex = closestIndex + 1;
+
+    // Boundary check
+    if (closestIndex === currentRouteStops.length - 1) {
+        segmentStartIndex = closestIndex - 1;
+        segmentEndIndex = closestIndex;
+    }
+
+    // Mathematical progression percentage between the two stops
+    let startStop = currentRouteStops[segmentStartIndex];
+    let endStop = currentRouteStops[segmentEndIndex];
+
+    let distToStart = getDistance(currentLat, currentLng, startStop.lat, startStop.lng);
+    let distToEnd = getDistance(currentLat, currentLng, endStop.lat, endStop.lng);
+    let segmentTotalDist = getDistance(startStop.lat, startStop.lng, endStop.lat, endStop.lng);
+
+    // Guard against 0 division if stops are identical
+    if (segmentTotalDist === 0) segmentTotalDist = 0.0001; 
+
+    // Calculate percentage (0.0 to 1.0) along the segment 
+    let progress = distToStart / (distToStart + distToEnd);
+    if (progress > 1) progress = 1;
+    if (progress < 0) progress = 0;
+
+    // Map the progress to literal CSS 'top' value in the timeline 
+    // Each stop visually takes up standard space (80px height per stop block)
+    const blocksCount = currentRouteStops.length - 1;
+    const basePercentagePerBlock = 100 / blocksCount;
+
+    const blockStartPercent = segmentStartIndex * basePercentagePerBlock;
+    const currentProgressPercent = blockStartPercent + (progress * basePercentagePerBlock);
+
+    // Apply smooth CSS transition
+    document.getElementById('busTrackerIcon').style.top = `calc(${currentProgressPercent}% - 25px)`;
 }
 
 
