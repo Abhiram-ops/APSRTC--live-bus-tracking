@@ -778,6 +778,14 @@ function updateTimelineBusPosition(currentLat, currentLng) {
     // Calculate real-time continuous progress ratio based strictly on GPS mathematically
     let progress = Math.max(0, Math.min(1, distToStart / (distToStart + distToEnd)));
 
+    // Lock perfectly onto the junction if the buses physical proximity is < 0.3km
+    // This ensures the icon isn't floating "between" stops while actually parked at a stop
+    if (distToStart < 0.3) {
+        progress = 0;
+    } else if (distToEnd < 0.3) {
+        progress = 1;
+    }
+
     const blocksCount = currentRouteStops.length - 1;
     const basePercentagePerBlock = 100 / blocksCount;
 
