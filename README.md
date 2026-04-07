@@ -19,6 +19,11 @@ A modern, real-time bus tracking application for Visakhapatnam (Vizag) city. Bui
 - **Live Status:** Visual indicators for active/inactive status.
 - **Secure Login:** Dedicated driver authentication portal.
 
+### ⚡ Performance & Reliability
+- **Connection Pooling:** Efficient database handling preventing concurrent request bottlenecks.
+- **Enhanced Concurrency:** Gunicorn tuned for optimal web worker output.
+- **Robust Connection Handling:** Automatic DB connection closure implementations ensuring zero resource leaks.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -64,7 +69,14 @@ SECRET_KEY=your_secure_random_key_here
 FLASK_ENV=development
 ```
 
-### 5. Run the Application
+### 5. Database Setup
+```bash
+# Initialize schema and seed driver accounts
+python Backend/init_db.py
+python Backend/seed_drivers.py
+```
+
+### 6. Run the Application
 ```bash
 # Navigate to the backend directory if needed, or run from root:
 python Backend/backend.py
@@ -94,10 +106,13 @@ This project is configured for deployment on Render.
 │   ├── templates/          # HTML files (index, login, driver)
 │   ├── backend.py          # Main Flask Application
 │   ├── init_db.py          # Database Initialization Script
+│   ├── seed_drivers.py     # Database seeding helper script
+│   ├── fix_db_close.py     # Resource leak patching script
 │   └── .env                # Environment Variables (Not committed)
+├── Project_Documentation.html # Comprehensive final-year project report
 ├── apsrtc.db               # SQLite Database (Auto-generated)
 ├── requirements.txt        # Python Dependencies
-└── README.md               # Project Documentation
+└── README.md               # Project README
 ```
 
 ## 🛡️ Security

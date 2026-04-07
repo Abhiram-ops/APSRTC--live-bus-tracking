@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>APSRTC Live Tracking Project Documentation</title>
+    <style>
+        /* Exact Formatting Requested */
+        body { 
+            font-family: "Times New Roman", Times, serif; 
+            font-size: 12pt; /* Body/Data: 12pt */
+            line-height: 1.6; 
+            color: black; 
+            max-width: 8.5in; /* Standard page width */
+            margin: 0 auto; 
+            padding: 40px; 
+        }
+        h1, h2 { 
+            font-size: 16pt; /* Headings: 16pt */
+            font-weight: bold; 
+            margin-top: 30px; 
+            margin-bottom: 15px; 
+        }
+        h1.title {
+            text-align: center;
+            font-size: 18pt; /* Just a bit larger for the main title */
+            text-transform: uppercase;
+            margin-bottom: 40px;
+        }
+        h3, h4 { 
+            font-size: 14pt; /* Subheadings: 14pt */
+            font-weight: bold; 
+            margin-top: 20px; 
+            margin-bottom: 10px; 
+        }
+        p, li, td { 
+            font-size: 12pt; /* Body/Data: 12pt */
+            margin-bottom: 12px; 
+            text-align: justify; 
+        }
+        ul, ol {
+            margin-bottom: 15px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 15px;
+            margin-bottom: 20px; 
+        }
+        th { 
+            font-size: 14pt; /* Subheadings for table headers */
+            border: 1px solid black; 
+            padding: 10px; 
+            background-color: #f2f2f2;
+            text-align: left; 
+        }
+        td { 
+            border: 1px solid black; 
+            padding: 10px; 
+        }
+        
+        /* Printing Requirements */
+        @media print {
+            body { 
+                padding: 0; 
+            }
+            /* one-sided only is configured in the print dialog */
+            /* Print in color is configured in the print dialog */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="title">PROJECT REPORT ON: APSRTC LIVE BUS TRACKING & MANAGEMENT SYSTEM</h1>
+
+    <h2>ABSTRACT</h2>
+    <p>The public transportation system, particularly the Andhra Pradesh State Road Transport Corporation (APSRTC) in Visakhapatnam, serves as the primary mode of transit for millions of commuters daily. However, the lack of real-time visibility into bus locations leads to unpredictability, longer wait times, and commuter dissatisfaction. This project introduces a comprehensive, real-time "APSRTC Live Tracking System" designed to bring transparency and efficiency to city bus services.</p>
+    <p>Developed using an advanced technological stack comprising Python (Flask) for the backend RESTful APIs, SQLite for lightweight robust data management, and Vanilla JS paired with Leaflet.js for interactive mapping, the system bridges the gap between the transit authority and the passengers. The application features extensive glassmorphism UI design, offering a premium and responsive user experience. The integrated driver portal allows bus operators to broadcast their GPS location seamlessly using mobile devices, whilst commuters can track active services, view detailed timetables, and plan their journeys securely. Security is enforced through Flask-Limiter, Werkzeug hashing, and secure HTTP headers, making this platform not only attractive but resilient for real-world deployment.</p>
+
+    <!-- Page Break for printing -->
+    <div style="page-break-after: always;"></div>
+
+    <h2>1. INTRODUCTION</h2>
+    
+    <h3>1.1 Problem Statement</h3>
+    <p>In rapidly growing urban environments like Visakhapatnam, public transit remains heavily utilized but largely untracked by modern digital standards. Commuters frequently face issues such as uncertain wait times at bus stops, lack of information regarding route changes or delays, and generalized inefficiency in planning their daily travel. Drivers, on the other hand, lack a simple interface to report their active status without the need for expensive dedicated hardware installed in the buses.</p>
+    
+    <h3>1.2 Proposed Solution</h3>
+    <p>This project proposes a dual-interface web application. First, a Commuter Portal where users can digitally query routes between dynamic stations, view real-time location markers of matching buses, and study route timetables. Second, a Driver Dashboard accessible via standard smartphones, utilizing the HTML5 Geolocation API to transmit coordinates to a central database at regular intervals. By harnessing cloud-deployment paradigms on platforms like Render, the system operates constantly with near-zero downtime.</p>
+
+    <h3>1.3 Core Objectives</h3>
+    <ul>
+        <li>To develop a real-time tracking interface showing bus movements on interactive digital maps.</li>
+        <li>To establish a highly responsive and visually appealing user interface utilizing modern design tokens (Glassmorphism).</li>
+        <li>To implement a stateless but highly concurrent mechanism to calculate and update bus locations globally.</li>
+        <li>To provide robust authentication systems for secure Driver and Administrator logins.</li>
+    </ul>
+
+    <h2>2. SYSTEM ARCHITECTURE & TECHNOLOGY STACK</h2>
+
+    <h3>2.1 Hardware and Software Requirements</h3>
+    <ul>
+        <li><strong>Server Environment:</strong> Linux/Windows based Cloud Server (Render / Azure).</li>
+        <li><strong>Backend Engine:</strong> Python 3.10+ coupled with the Flask WSGI Microframework.</li>
+        <li><strong>Database Management:</strong> SQLite3 facilitated via Flask-SQLAlchemy (ORM).</li>
+        <li><strong>Frontend Technologies:</strong> HTML5, CSS3, Vanilla ECMAScript 6 (JavaScript).</li>
+        <li><strong>Mapping Engine:</strong> OpenStreetMap data rendered via Leaflet.js.</li>
+    </ul>
+
+    <h3>2.2 Architecture Design</h3>
+    <p>The system follows the traditional Client-Server Architecture paired with the Model-View-Controller (MVC) paradigm. The browser acts as the View layer rendering dynamic Jinja2 templates. The Flask application instance serves as the Controller, orchestrating inputs from users (route searches, login attempts) and interacting with the SQLAlchemy Models. Gunicorn acts as the production-grade HTTP server managing worker threads to sustain high volumes of concurrent requests without lagging.</p>
+
+    <!-- Page Break for printing -->
+    <div style="page-break-after: always;"></div>
+
+    <h2>3. DETAILED MODULE DESCRIPTION</h2>
+
+    <h3>3.1 The Commuter Module</h3>
+    <p>This represents the primary public-facing interface. It features a scenic Vizag-themed graphical wrapper optimized for fast loading over cellular networks. Commuters input their "From" and "To" destinations. The server evaluates route intersections, fetching all applicable "Services" that connect those stops. Users can then toggle a live map view which parses GeoJSON data and plots buses moving in real-time. Estimated Times of Arrival (ETA) and scheduled timetables are also displayed contextually based on the user's specific query.</p>
+
+    <h3>3.2 The Driver Module</h3>
+    <p>Constructed with a 'Mobile-First' philosophy, this module features large interactive touch targets. Drivers securely log in utilizing credentials verified against hashed strings in the database. Upon starting a trip, a background JavaScript daemon invokes the device's native GPS unit, streaming coordinates to a dedicated API endpoint asynchronously. The visual indicator transitions to an "Active" state confirming successful broadcast.</p>
+
+    <h3>3.3 Security & Authentication Module</h3>
+    <p>Security is paramount due to the collection of location data. This module integrates:</p>
+    <ul>
+        <li><strong>Password Cryptography:</strong> Utilizing Werkzeug security libraries for salted hash storage.</li>
+        <li><strong>Rate Limiting:</strong> Enforced by Flask-Limiter to throttle repeated failed authentication requests, preventing brute-force intrusion.</li>
+        <li><strong>Session Integrity:</strong> Hardened server-side session cookies that manage state securely.</li>
+        <li><strong>Prevention of Injection:</strong> Overarching reliance on SQLAlchemy paradigms ensuring that all inputs are parameterized before SQL execution.</li>
+    </ul>
+
+    <h2>4. DATABASE SCHEMA DESIGN</h2>
+    <p>The relational database relies on tightly normalized tables representing the transport network logic:</p>
+    <table>
+        <tr>
+            <th>Entity Name</th>
+            <th>Primary Function and Relationships</th>
+        </tr>
+        <tr>
+            <td><strong>Routes</strong></td>
+            <td>Maintains core paths (`route_id`, `from_station`, `to_station`). It dictates the overarching journey path independently of individual buses.</td>
+        </tr>
+        <tr>
+            <td><strong>Services</strong></td>
+            <td>Represents scheduled trips under a Route. Holds price, service type (e.g., Express, Ordinary), and links rigidly to Timetables.</td>
+        </tr>
+        <tr>
+            <td><strong>Vehicles & Location</strong></td>
+            <td>The `Vehicles` table identifies actual physical buses (`vehicle_no`, `status`), whilst the `LiveLocation` table handles volatile, rapidly updating coordinate metrics (`lat`, `lng`, `speed`, `updated_at`).</td>
+        </tr>
+        <tr>
+            <td><strong>Drivers & Users</strong></td>
+            <td>Maintains encrypted identities. Drivers are relationship-mapped specifically to `Services` to authorize location publishing for that exact trip.</td>
+        </tr>
+    </table>
+
+    <h2>5. IMPLEMENTATION & DEPLOYMENT</h2>
+    <p>The deployment pipeline involves version control through GitHub and Continuous Deployment (CD). Utilizing `gunicorn` with optimized worker threads bridges the WSGI application with the external network. Environment variables (`.env`) shield sensitive data such as secret keys. The repository uses `requirements.txt` to strictly manage dependencies like Flask-SQLAlchemy and python-dotenv to prevent runtime discrepancies across environments.</p>
+
+    <h2>6. CONCLUSION</h2>
+    <p>The APSRTC Live Tracking system successfully demonstrates the feasibility of combining lightweight, open-source mapping services with robust Python backend technologies. By delivering a highly responsive, glassmorphism-themed frontend alongside a secure, efficient data pipeline, the project modernizes the transit experience for commuters in Vizag. It provides an impressive foundation that achieves the goal of real-time visibility without requiring significant hardware investment by the authorities.</p>
+
+    <h3>Future Enhancements</h3>
+    <p>Future scope for this application includes implementing Machine Learning algorithms to predict bus arrival times accurately despite dynamic traffic congestion, incorporating real-time traffic layer overlays on Leaflet.js, and integrating payment gateways for digital ticket acquisition.</p>
+
+</body>
+</html>
