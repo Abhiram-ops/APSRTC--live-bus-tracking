@@ -18,24 +18,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
+      # Copy requirements.txt into Backend folder so it deploys with the code
+      - name: Prepare deployment package
         run: |
           cp requirements.txt Backend/
-          cd Backend
-          python -m venv antenv
-          source antenv/bin/activate
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          cp startup.sh Backend/ || true
+          cp Procfile Backend/ || true
 
-      - name: Zip deployment package
+      # Zip ONLY the source code — NO pre-built venv
+      # Azure will run pip install itself using Oryx build system
+      - name: Zip source code only
         run: |
           cd Backend
-          zip -r ../release.zip . -x "*.pyc" -x "__pycache__/*" -x ".venv/*" -x "*.db" -x "venv2/*"
+          zip -r ../release.zip . \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x "venv/*" \
+            -x "venv2/*" \
+            -x "antenv/*" \
+            -x ".venv/*" \
+            -x "*.db" \
+            -x "instance/*"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
